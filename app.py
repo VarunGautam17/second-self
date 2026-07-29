@@ -1,9 +1,10 @@
 """
 Streamlit Community Cloud root entrypoint wrapper for SecondSelf.
-Delegates to secondself/app.py while ensuring sys.path and working directory are correctly aligned.
+Executes secondself/app.py dynamically under Streamlit runtime.
 """
 import os
 import sys
+import runpy
 from pathlib import Path
 
 # Locate secondself directory
@@ -17,9 +18,6 @@ if str(secondself_dir) not in sys.path:
 # Change working directory to secondself for relative paths (static/, data/, wiki/, raw/)
 os.chdir(secondself_dir)
 
-# Import and run secondself main app function
-import app  # noqa: E402
-
-if __name__ == "__main__":
-    if hasattr(app, "main"):
-        app.main()
+# Execute secondself/app.py natively as __main__
+target_script = secondself_dir / "app.py"
+runpy.run_path(str(target_script), run_name="__main__")
