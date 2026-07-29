@@ -17,5 +17,9 @@ if str(secondself_dir) not in sys.path:
 # Change working directory to secondself for relative paths (static/, data/, wiki/, raw/)
 os.chdir(secondself_dir)
 
-# Run secondself app
+# Import and run secondself main app function
 import app  # noqa: E402
+
+if __name__ == "__main__":
+    if hasattr(app, "main"):
+        app.main()
