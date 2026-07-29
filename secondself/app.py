@@ -18,10 +18,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
-from lib import models, storage, embeddings, llm
-import ask
-import capture
-import pipeline
+from secondself.lib import storage, llm, embeddings, models
+from secondself.lib.cloud_sync import sync_from_cloud, sync_to_cloud
+from secondself import ask, capture, pipeline
 
 load_dotenv()
 
@@ -524,7 +523,15 @@ def render_auth_screen():
 
                 # Create clean slug for user folder (e.g. "varun_gautam")
                 user_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', clean_name.lower())
+                
+                # Sync from cloud if existing user
+                with st.spinner("Syncing your 2nd Brain from the cloud..."):
+                    sync_from_cloud(user_slug)
+                    
                 storage.init_user_workspace(user_slug, copy_demo_data=seed_demo, user_name=clean_name, api_key=clean_key)
+                
+                # Push initialization config to cloud
+                sync_to_cloud(user_slug)
 
                 st.session_state["user_name"] = clean_name
                 st.session_state["user_slug"] = user_slug
@@ -545,6 +552,8 @@ def main():
     if "user_authenticated" not in st.session_state or not st.session_state["user_authenticated"]:
         param_slug = st.query_params.get("user")
         if param_slug:
+            # Sync user data from cloud to local ephemeral storage before loading config
+            sync_from_cloud(param_slug)
             user_cfg = storage.load_user_config(param_slug)
             if user_cfg and user_cfg.get("user_name"):
                 st.session_state["user_name"] = user_cfg["user_name"]
@@ -637,6 +646,8 @@ def main():
             if st.button("Ingest Content", use_container_width=True, key="btn_ingest_text"):
                 if capture_input:
                     handle_capture(capture_input)
+                    with st.spinner("Syncing to cloud..."):
+                        sync_to_cloud(st.session_state["user_slug"])
                     st.cache_data.clear()
                 else:
                     st.error("Please enter content or path.")
@@ -651,6 +662,8 @@ def main():
                     if user_key:
                         os.environ["GROQ_API_KEY"] = user_key
                     pipeline.run_process(threshold=0.4)
+                    with st.spinner("Syncing graph and notes to cloud..."):
+                        sync_to_cloud(st.session_state["user_slug"])
                     st.cache_data.clear()
                     st.success("Pipeline completed! Knowledge graph & PARA notes updated.")
                     st.rerun()

@@ -8,3 +8,4 @@ requests
 pymdown-extensions
 beautifulsoup4
 pyyaml
+supabase
