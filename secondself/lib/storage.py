@@ -34,8 +34,20 @@ CONTENT_FILENAMES = {
 }
 
 
+_ACTIVE_USER_SLUG: str | None = None
+
+
+def set_active_user_slug(slug: str | None) -> None:
+    """Explicitly set active user slug for storage operations."""
+    global _ACTIVE_USER_SLUG
+    _ACTIVE_USER_SLUG = slug
+
+
 def get_current_user_slug() -> str | None:
-    """Return active user_slug from Streamlit session_state if running in web context."""
+    """Return active user_slug from explicit state or Streamlit session_state."""
+    global _ACTIVE_USER_SLUG
+    if _ACTIVE_USER_SLUG:
+        return _ACTIVE_USER_SLUG
     try:
         import streamlit as st
         if "user_slug" in st.session_state and st.session_state["user_slug"]:

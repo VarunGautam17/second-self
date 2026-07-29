@@ -560,6 +560,8 @@ def main():
     user_slug = st.session_state.get("user_slug", "default")
     user_key = st.session_state.get("groq_api_key", "")
 
+    # Synchronize active user slug and API key across storage and environment
+    storage.set_active_user_slug(user_slug)
     if user_key:
         os.environ["GROQ_API_KEY"] = user_key
 
@@ -583,6 +585,7 @@ def main():
 
         if st.button("Switch User / Log Out 🚪", key="btn_logout", use_container_width=True):
             st.query_params.clear()
+            storage.set_active_user_slug(None)
             st.session_state["user_authenticated"] = False
             st.session_state["user_name"] = ""
             st.session_state["user_slug"] = ""

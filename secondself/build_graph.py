@@ -107,12 +107,8 @@ def main():
         print("No nodes to export.")
         return
 
-    output_path = Path(args.output) if args.output else storage.PROJECT_ROOT / "graph.json"
+    output_path = Path(args.output) if args.output else storage.get_data_dir() / "graph.json"
     written_path = storage.write_graph_json(nodes, edges, output_path)
-    
-    # Also write a copy to data/graph.json for convenience
-    data_graph_path = storage.DATA_DIR / "graph.json"
-    storage.write_graph_json(nodes, edges, data_graph_path)
 
     # Update index.json with last_graph_build timestamp
     index = storage.load_index()
