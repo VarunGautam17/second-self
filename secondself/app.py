@@ -327,7 +327,6 @@ def get_graph_data(user_slug: str | None = None):
     return {"nodes": [], "edges": [], "metadata": {}}
 
 
-@st.cache_data
 def get_wiki_stats(user_slug: str | None = None):
     """Compute wiki note category counts and total statistics for active user."""
     notes = storage.read_wiki_notes()
