@@ -85,7 +85,32 @@ def ensure_dirs() -> None:
         (wiki_dir / category).mkdir(parents=True, exist_ok=True)
 
 
-def init_user_workspace(user_slug: str, copy_demo_data: bool = False) -> Path:
+def save_user_config(user_slug: str, user_name: str, api_key: str) -> None:
+    """Save user session configuration into users/<user_slug>/config.json."""
+    user_base = PROJECT_ROOT / "users" / user_slug
+    user_base.mkdir(parents=True, exist_ok=True)
+    config_path = user_base / "config.json"
+    data = {
+        "user_name": user_name,
+        "user_slug": user_slug,
+        "api_key": api_key,
+        "last_login": utc_now_iso(),
+    }
+    config_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def load_user_config(user_slug: str) -> dict | None:
+    """Load user session configuration from users/<user_slug>/config.json."""
+    config_path = PROJECT_ROOT / "users" / user_slug / "config.json"
+    if not config_path.is_file():
+        return None
+    try:
+        return json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def init_user_workspace(user_slug: str, copy_demo_data: bool = False, user_name: str = "", api_key: str = "") -> Path:
     """Initialize user workspace in users/<user_slug>/, optionally seeding demo data."""
     user_base = PROJECT_ROOT / "users" / user_slug
     user_raw = user_base / "raw"
@@ -96,6 +121,9 @@ def init_user_workspace(user_slug: str, copy_demo_data: bool = False) -> Path:
     user_data.mkdir(parents=True, exist_ok=True)
     for category in PARA_CATEGORIES:
         (user_wiki / category).mkdir(parents=True, exist_ok=True)
+
+    if user_name:
+        save_user_config(user_slug, user_name, api_key)
 
     if copy_demo_data:
         demo_wiki = PROJECT_ROOT / "wiki"

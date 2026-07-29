@@ -475,7 +475,10 @@ def render_auth_screen():
                 "Groq API Key",
                 type="password",
                 placeholder="gsk_...",
-                help="Enter your personal Groq API key from console.groq.com"
+            )
+            st.markdown(
+                "👉 **Get your free Groq API key here:** [console.groq.com/keys](https://console.groq.com/keys)",
+                unsafe_allow_html=True
             )
             seed_demo = st.checkbox(
                 "Load Demo Knowledge Base (Pre-populates sample PARA notes & graph)",
@@ -500,7 +503,7 @@ def render_auth_screen():
                         clean_key = os.environ.get("GROQ_API_KEY", "")
 
                 if not clean_key:
-                    st.error("Please enter your Groq API Key. Get a free key at https://console.groq.com/")
+                    st.error("Please enter your Groq API Key. Get a free key at https://console.groq.com/keys")
                     return
 
                 with st.spinner("Validating Groq API key..."):
@@ -521,12 +524,16 @@ def render_auth_screen():
 
                 # Create clean slug for user folder (e.g. "varun_gautam")
                 user_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', clean_name.lower())
-                storage.init_user_workspace(user_slug, copy_demo_data=seed_demo)
+                storage.init_user_workspace(user_slug, copy_demo_data=seed_demo, user_name=clean_name, api_key=clean_key)
 
                 st.session_state["user_name"] = clean_name
                 st.session_state["user_slug"] = user_slug
                 st.session_state["groq_api_key"] = clean_key
                 st.session_state["user_authenticated"] = True
+                os.environ["GROQ_API_KEY"] = clean_key
+
+                # Preserve session across page refreshes via URL parameter
+                st.query_params["user"] = user_slug
 
                 st.cache_data.clear()
                 st.success(f"Welcome back, {clean_name}!")
@@ -534,16 +541,27 @@ def render_auth_screen():
 
 
 def main():
-    # 1. User Authentication Check
-    if "user_authenticated" not in st.session_state:
-        st.session_state["user_authenticated"] = False
+    # 1. User Authentication & Session Persistence Check
+    if "user_authenticated" not in st.session_state or not st.session_state["user_authenticated"]:
+        param_slug = st.query_params.get("user")
+        if param_slug:
+            user_cfg = storage.load_user_config(param_slug)
+            if user_cfg and user_cfg.get("user_name"):
+                st.session_state["user_name"] = user_cfg["user_name"]
+                st.session_state["user_slug"] = user_cfg["user_slug"]
+                st.session_state["groq_api_key"] = user_cfg.get("api_key", "")
+                st.session_state["user_authenticated"] = True
 
-    if not st.session_state["user_authenticated"]:
+    if not st.session_state.get("user_authenticated"):
         render_auth_screen()
         return
 
     user_name = st.session_state.get("user_name", "User")
     user_slug = st.session_state.get("user_slug", "default")
+    user_key = st.session_state.get("groq_api_key", "")
+
+    if user_key:
+        os.environ["GROQ_API_KEY"] = user_key
 
     # Load model and stats for active user session
     emb_model = get_embedding_model()
@@ -564,6 +582,7 @@ def main():
         st.success("Groq API Connected", icon="✅")
 
         if st.button("Switch User / Log Out 🚪", key="btn_logout", use_container_width=True):
+            st.query_params.clear()
             st.session_state["user_authenticated"] = False
             st.session_state["user_name"] = ""
             st.session_state["user_slug"] = ""
@@ -624,11 +643,16 @@ def main():
         # Pipeline Processing Control
         st.subheader("Pipeline Controls")
         if st.button("Run Pipeline (Process & Link)", use_container_width=True, type="primary"):
-            with st.spinner("Processing raw captures, computing embeddings & rebuilding graph..."):
-                pipeline.run_process(threshold=0.4)
-                st.cache_data.clear()
-                st.success("Pipeline executed successfully!")
-                st.rerun()
+            with st.spinner("Processing raw captures, auto-linking notes & rebuilding graph..."):
+                try:
+                    if user_key:
+                        os.environ["GROQ_API_KEY"] = user_key
+                    pipeline.run_process(threshold=0.4)
+                    st.cache_data.clear()
+                    st.success("Pipeline completed! Knowledge graph & PARA notes updated.")
+                    st.rerun()
+                except Exception as ex:
+                    st.error(f"Pipeline error: {ex}")
 
         if st.button("Refresh Cache", use_container_width=True):
             st.cache_data.clear()

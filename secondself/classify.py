@@ -116,13 +116,13 @@ def main():
     )
     args = parser.parse_args()
 
-    # Verify Groq API key is set
-    api_key = os.environ.get("GROQ_API_KEY")
-    if not api_key:
-        print("Error: GROQ_API_KEY environment variable is not set. Please check your .env file.")
-        sys.exit(1)
-
-    client = Groq(api_key=api_key)
+    # Verify Groq API key and get client
+    try:
+        from lib import llm
+        client = llm.get_client()
+    except Exception as e:
+        print(f"Error initializing Groq client: {e}")
+        return
 
     # Read all raw captures
     print("Reading raw captures...")
