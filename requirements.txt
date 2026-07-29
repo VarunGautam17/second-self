@@ -1,5 +1,6 @@
 groq
 sentence-transformers
+torchvision
 streamlit
 streamlit-agraph
 python-dotenv

@@ -36,6 +36,7 @@ env/
 .idea/
 .gemini/
 .DS_Store
+error.txt
 
 # Explicitly track source code lib (do not block secondself/lib)
 !secondself/lib/
