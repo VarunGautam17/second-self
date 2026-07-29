@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv/
+
+# Environments & Secrets
+.env
+.env.local
+.env.*.local
+.obsidian/
+
+# IDEs & System
+.vscode/
+.idea/
+.gemini/
+.DS_Store
+
+# Explicitly track source code lib (do not block secondself/lib)
+!secondself/lib/
+
+# Personal Notes & Data Privacy Protection (Do NOT commit personal notes or data to GitHub)
+secondself/wiki/**
+secondself/raw/**
+secondself/data/**
+secondself/graph.json
+wiki/**
+raw/**
+data/**
+*.json
+
+# Preserve directory structures in git
+!**/
+!**/.gitkeep

@@ -1,0 +1,650 @@
+/* ============================================================
+   CELEVARE — Main JavaScript  v2.0
+   Globe · Headline Cycling · Builder Demo · Login Modal
+   Kanban Drag · Scroll Reveal · Nav · Testimonials
+   ============================================================ */
+
+'use strict';
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.add('is-ready');
+
+  // Core UI
+  initNav();
+  initMobileMenu();
+  initSmoothScroll();
+  initScrollReveal();
+
+  // V1 Sections
+  initBrowserTilt();
+  initHowSteps();
+  initTestimonials();
+  initResourceTabs();
+  initExpertsDrag();
+
+  // V2 Sections
+  initGlobe();
+  initHeadlineCycle();
+  initBuilderDemo();
+  initLinkedInKanban();
+  initLoginModal();
+});
+
+/* ─────────────────────────────────────────────────────────────
+   1. NAVIGATION — scroll border
+───────────────────────────────────────────────────────────── */
+function initNav() {
+  const nav = document.getElementById('main-nav');
+  if (!nav) return;
+  const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 24);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+}
+
+/* ─────────────────────────────────────────────────────────────
+   2. MOBILE MENU
+───────────────────────────────────────────────────────────── */
+function initMobileMenu() {
+  const toggle = document.getElementById('hamburger');
+  const menu   = document.getElementById('mobile-menu');
+  if (!toggle || !menu) return;
+
+  toggle.addEventListener('click', () => {
+    const open = menu.classList.toggle('open');
+    toggle.classList.toggle('open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', e => {
+    if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+      menu.classList.remove('open');
+      toggle.classList.remove('open');
+    }
+  });
+  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    menu.classList.remove('open');
+    toggle.classList.remove('open');
+  }));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3. SMOOTH SCROLL
+───────────────────────────────────────────────────────────── */
+function initSmoothScroll() {
+  document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener('click', e => {
+      const id = link.getAttribute('href');
+      if (id === '#') return;
+      const target = document.querySelector(id);
+      if (!target) return;
+      e.preventDefault();
+      const top = target.getBoundingClientRect().top + window.scrollY - 72;
+      window.scrollTo({ top, behavior: 'smooth' });
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   4. SCROLL REVEAL
+───────────────────────────────────────────────────────────── */
+function initScrollReveal() {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('is-visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -48px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   5. BROWSER TILT (Product Showcase)
+───────────────────────────────────────────────────────────── */
+function initBrowserTilt() {
+  const shell = document.getElementById('browser-shell');
+  if (!shell) return;
+  new IntersectionObserver(entries => {
+    entries.forEach(e => shell.classList.toggle('is-flat', e.isIntersecting));
+  }, { threshold: 0.25 }).observe(shell);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   6. HOW IT WORKS steps
+───────────────────────────────────────────────────────────── */
+function initHowSteps() {
+  const steps = document.querySelectorAll('.how-step');
+  if (!steps.length) return;
+  steps[0].classList.add('is-active');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        steps.forEach(s => s.classList.remove('is-active'));
+        e.target.classList.add('is-active');
+      }
+    });
+  }, { threshold: 0.5, rootMargin: '-15% 0px -15% 0px' });
+  steps.forEach(s => io.observe(s));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   7. TESTIMONIALS CAROUSEL
+───────────────────────────────────────────────────────────── */
+function initTestimonials() {
+  const slider  = document.getElementById('t-slider');
+  const slides  = document.querySelectorAll('.t-slide');
+  const prevBtn = document.getElementById('t-prev');
+  const nextBtn = document.getElementById('t-next');
+  if (!slider || !slides.length) return;
+
+  let current = 0;
+  let timer;
+
+  const go = idx => {
+    current = ((idx % slides.length) + slides.length) % slides.length;
+    slider.style.transform = `translateX(-${current * 100}%)`;
+    slides.forEach((s, i) => s.setAttribute('aria-hidden', String(i !== current)));
+  };
+
+  const startAuto = () => { timer = setInterval(() => go(current + 1), 6000); };
+  const stopAuto  = () => clearInterval(timer);
+
+  if (prevBtn) prevBtn.addEventListener('click', () => { stopAuto(); go(current - 1); startAuto(); });
+  if (nextBtn) nextBtn.addEventListener('click', () => { stopAuto(); go(current + 1); startAuto(); });
+
+  const wrap = slider.closest('[data-testimonials]');
+  if (wrap) {
+    wrap.addEventListener('mouseenter', stopAuto);
+    wrap.addEventListener('mouseleave', startAuto);
+  }
+
+  let tx = 0;
+  slider.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  slider.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) go(current + (dx < 0 ? 1 : -1));
+  });
+
+  go(0);
+  startAuto();
+}
+
+/* ─────────────────────────────────────────────────────────────
+   8. RESOURCE TABS
+───────────────────────────────────────────────────────────── */
+function initResourceTabs() {
+  const tabs  = document.querySelectorAll('.res-tab');
+  const cards = document.querySelectorAll('.res-card[data-cat]');
+  if (!tabs.length) return;
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('is-active'));
+      tab.classList.add('is-active');
+      const cat = tab.dataset.tab;
+      cards.forEach(card => {
+        card.style.display = (cat === 'all' || card.dataset.cat === cat) ? '' : 'none';
+      });
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   9. EXPERTS DRAG TO SCROLL
+───────────────────────────────────────────────────────────── */
+function initExpertsDrag() {
+  const track = document.getElementById('experts-track');
+  if (!track) return;
+  let isDown = false, startX, scrollLeft, velocity = 0, lastX, rafId;
+
+  track.addEventListener('mousedown', e => {
+    isDown = true; startX = e.pageX - track.offsetLeft;
+    scrollLeft = track.scrollLeft; lastX = e.pageX; velocity = 0;
+    cancelAnimationFrame(rafId);
+  });
+  track.addEventListener('mouseleave', () => { isDown = false; momentum(); });
+  track.addEventListener('mouseup',    () => { isDown = false; momentum(); });
+  track.addEventListener('mousemove',  e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - track.offsetLeft;
+    track.scrollLeft = scrollLeft - (x - startX) * 1.5;
+    velocity = e.pageX - lastX;
+    lastX = e.pageX;
+  });
+
+  function momentum() {
+    const tick = () => {
+      if (Math.abs(velocity) < 0.5) return;
+      track.scrollLeft -= velocity;
+      velocity *= 0.92;
+      rafId = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
+  let tStart = 0, tScroll = 0;
+  track.addEventListener('touchstart', e => { tStart = e.touches[0].clientX; tScroll = track.scrollLeft; }, { passive: true });
+  track.addEventListener('touchmove',  e => { track.scrollLeft = tScroll + tStart - e.touches[0].clientX; }, { passive: true });
+}
+
+/* ═════════════════════════════════════════════════════════════
+   V2 — GLOBE ANIMATION (Stripe-style)
+═════════════════════════════════════════════════════════════ */
+function initGlobe() {
+  const canvas = document.getElementById('globe-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let R, cx, cy, rotation = 0;
+
+  // Procedural landmass check to generate dotted world map
+  function isLand(lat, lon) {
+    // Greenland
+    if (lat >= 60 && lat <= 83 && lon >= -75 && lon <= -15) return true;
+    
+    // North America
+    if (lat >= 15 && lat <= 72 && lon >= -170 && lon <= -50) {
+      if (lat > 50) return true;
+      if (lat > 25 && lon < -75) return true;
+      if (lat <= 25 && lon >= -100 && lon <= -80) return true;
+    }
+    
+    // South America
+    if (lat >= -56 && lat <= 12 && lon >= -82 && lon <= -34) {
+      if (lat < -20) {
+        const pct = (lat + 56) / 36;
+        const minLon = -76 - pct * 4;
+        const maxLon = -70 + pct * 30;
+        return lon >= minLon && lon <= maxLon;
+      }
+      return lon <= -40 - (lat - 12) * 0.5;
+    }
+    
+    // Africa
+    if (lat >= -35 && lat <= 37 && lon >= -18 && lon <= 51) {
+      if (lat > 15) return lon <= 35 || (lat < 30 && lon <= 45);
+      if (lat > 0) return lon >= -10 && lon <= 50;
+      const pct = (lat + 35) / 35;
+      return lon >= 10 - pct * 20 && lon <= 35 + pct * 15;
+    }
+    
+    // Europe
+    if (lat >= 35 && lat <= 71 && lon >= -10 && lon <= 40) {
+      if (lat > 60 && lon < 5) return false;
+      return true;
+    }
+    
+    // Asia
+    if (lat >= 1 && lat <= 77 && lon >= 35 && lon <= 180) {
+      if (lat >= 12 && lat <= 30 && lon >= 35 && lon <= 60) return true; // Arabia
+      if (lat >= 8 && lat <= 28 && lon >= 68 && lon <= 90) { // India
+        const pct = (lat - 8) / 20;
+        return lon >= 78 - pct * 10 && lon <= 78 + pct * 12;
+      }
+      if (lat >= 1 && lat <= 25 && lon >= 95 && lon <= 145) return true; // SE Asia
+      if (lat >= 30 && lat <= 45 && lon >= 128 && lon <= 146) return true; // Japan
+      if (lat >= 30) return lon >= 40 && lon <= 180;
+    }
+    
+    // Australia
+    if (lat >= -40 && lat <= -10 && lon >= 113 && lon <= 154) return true;
+    
+    return false;
+  }
+
+  // Pre-generate land coordinates for the dotted world map
+  const landPoints = [];
+  for (let lat = -80; lat <= 80; lat += 2.2) {
+    for (let lon = -180; lon <= 180; lon += 2.2) {
+      if (isLand(lat, lon)) {
+        landPoints.push({ lat, lon });
+      }
+    }
+  }
+
+  const FIELDS = [
+    { lat: 37.7, lon: -122.4, em: true },
+    { lat: 51.5, lon: -0.1,    em: true },
+    { lat: 40.7, lon: -74.0,   em: true },
+    { lat: 48.8, lon: 2.3,     em: true },
+    { lat: 1.3,  lon: 103.8,   em: true },
+    { lat: 35.7, lon: 139.7,   em: true },
+    { lat: 22.3, lon: 114.2 },
+    { lat: 19.1, lon: 72.9 },
+    { lat: 47.4, lon: 8.5 },
+    { lat: 25.2, lon: 55.3 },
+    { lat: 31.2, lon: 121.5 },
+    { lat: -33.9, lon: 151.2 }
+  ];
+
+  const EDGES = [
+    [0, 2], [1, 3], [2, 8], [3, 4], [4, 5], [5, 10], [8, 9], [9, 7]
+  ];
+
+  // Static Orbit Points mapping to absolute coordinates of the 5 industry chips
+  const ORBIT_POINTS = [
+    { id: 'ml', orbit: 1, angle: Math.PI * 1.02 }, // Technology (left)
+    { id: 'tl', orbit: 1, angle: -Math.PI * 0.17 }, // Leadership (top right)
+    { id: 'bm', orbit: 1, angle: Math.PI * 0.58 },  // Consulting (bottom)
+    { id: 'bl', orbit: 2, angle: Math.PI * 1.05 },  // Finance (bottom left)
+    { id: 'mr', orbit: 2, angle: Math.PI * 0.03 }   // Healthcare (right)
+  ];
+
+  function resize() {
+    const wrap = canvas.parentElement;
+    const pw = wrap ? wrap.offsetWidth : 480;
+    const sz = Math.min(pw, 500);
+    canvas.width = sz; canvas.height = sz;
+    R = sz * 0.42; cx = sz / 2; cy = sz / 2;
+  }
+
+  function project(lat, lon) {
+    const phi   = (90 - lat) * Math.PI / 180;
+    const theta = (lon + rotation) * Math.PI / 180;
+    const x = R * Math.sin(phi) * Math.cos(theta);
+    const y = -R * Math.cos(phi);
+    const z = R * Math.sin(phi) * Math.sin(theta);
+    return { x: cx + x, y: cy + y, z, vis: z > -R * 0.15 };
+  }
+
+  function getEllipsePoint(rx, ry, tilt, angle) {
+    const cosT = Math.cos(tilt);
+    const sinT = Math.sin(tilt);
+    const x = rx * Math.cos(angle);
+    const y = ry * Math.sin(angle);
+    return {
+      x: cx + x * cosT - y * sinT,
+      y: cy + x * sinT + y * cosT
+    };
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Sphere fill
+    const g = ctx.createRadialGradient(cx - R * 0.2, cy - R * 0.2, 0, cx, cy, R);
+    g.addColorStop(0,   'rgba(255,255,255,0.95)');
+    g.addColorStop(0.6, 'rgba(248,247,244,0.72)');
+    g.addColorStop(1,   'rgba(235,232,226,0.35)');
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = 'rgba(220,216,208,0.36)';
+    ctx.lineWidth = 1; ctx.stroke();
+
+    // Draw the procedural dotted landmasses
+    ctx.fillStyle = 'rgba(175,170,160,0.35)';
+    landPoints.forEach(pt => {
+      const p = project(pt.lat, pt.lon);
+      if (!p.vis) return;
+      const depth = (p.z + R) / (2 * R);
+      const r = 0.9 + depth * 0.9;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Draw connection lines on surface
+    EDGES.forEach(([i, j]) => {
+      if (!FIELDS[i] || !FIELDS[j]) return;
+      const pa = project(FIELDS[i].lat, FIELDS[i].lon);
+      const pb = project(FIELDS[j].lat, FIELDS[j].lon);
+      if (!pa.vis || !pb.vis) return;
+      const depth = Math.min((pa.z + R) / (2 * R), (pb.z + R) / (2 * R));
+      const alpha = depth * 0.26;
+      if (alpha < 0.02) return;
+      const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
+      const d = Math.hypot(mx - cx, my - cy) || 1;
+      const pull = R * 0.12;
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y);
+      ctx.quadraticCurveTo(mx - (mx - cx) / d * pull, my - (my - cy) / d * pull, pb.x, pb.y);
+      ctx.strokeStyle = `rgba(16,185,129,${alpha})`;
+      ctx.lineWidth = 0.9; ctx.stroke();
+    });
+
+    // Draw active coordinates on surface (green city dots)
+    const vis = FIELDS.map((f, i) => ({ ...f, i, p: project(f.lat, f.lon) }))
+      .filter(f => f.p.vis)
+      .sort((a, b) => a.p.z - b.p.z);
+
+    vis.forEach(f => {
+      const depth = (f.p.z + R) / (2 * R);
+      const r = 2.2 + depth * 2.2;
+      ctx.beginPath(); ctx.arc(f.p.x, f.p.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = '#10B981';
+      ctx.globalAlpha = 0.4 + depth * 0.6;
+      ctx.fill();
+
+      if (f.em) {
+        ctx.beginPath(); ctx.arc(f.p.x, f.p.y, r * 2.4, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(16,185,129,0.22)';
+        ctx.lineWidth = 1; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    });
+
+    // Draw Orbit 1 (tilted ellipse 1)
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, R * 1.18, R * 0.45, -Math.PI / 6, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(175,170,160,0.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Draw Orbit 2 (tilted ellipse 2)
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, R * 1.32, R * 0.35, Math.PI / 10, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(175,170,160,0.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Draw Orbit Dots & dynamically align HTML chips to match design perfectly
+    ORBIT_POINTS.forEach(pt => {
+      const rx = pt.orbit === 1 ? R * 1.18 : R * 1.32;
+      const ry = pt.orbit === 1 ? R * 0.45 : R * 0.35;
+      const tilt = pt.orbit === 1 ? -Math.PI / 6 : Math.PI / 10;
+      const pos = getEllipsePoint(rx, ry, tilt, pt.angle);
+
+      // Draw Orbit Point
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#10B981';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(16,185,129,0.3)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Dynamic positioning of HTML text chip to the right of the dot
+      const chip = document.querySelector(`.globe-chip--${pt.id}`);
+      if (chip) {
+        chip.style.left = `${pos.x + 14}px`;
+        chip.style.top = `${pos.y}px`;
+      }
+    });
+  }
+
+  function tick() { rotation += 0.12; draw(); requestAnimationFrame(tick); }
+
+  resize();
+  window.addEventListener('resize', () => { resize(); });
+  tick();
+}
+
+/* ═════════════════════════════════════════════════════════════
+   V2 — NOTION-STYLE HEADLINE CYCLING
+═════════════════════════════════════════════════════════════ */
+function initHeadlineCycle() {
+  const outer = document.getElementById('hn-cycle');
+  if (!outer) return;
+  const inner = outer.querySelector('.hn-cycle-inner');
+  const words = outer.querySelectorAll('.hn-cycle-word');
+  if (!inner || words.length < 2) return;
+
+  // Wait for entrance animation (0.22s delay + 0.75s duration = ~1s) then start cycling
+  setTimeout(() => {
+    // Measure the rendered height of a single word (they're all the same font/size)
+    const wordH = words[0].offsetHeight || 78;
+    // Set the outer's height to clip to exactly one word
+    outer.style.height = wordH + 'px';
+
+    // Reset inner: remove entrance animation, start at position 0
+    inner.style.animation = 'none';
+    inner.style.opacity   = '1';
+    inner.style.transform = 'translateY(0)';
+
+    let cur = 0;
+    setInterval(() => {
+      cur = (cur + 1) % words.length;
+      inner.style.transform = `translateY(-${cur * wordH}px)`;
+    }, 2800);
+  }, 1100); // wait for entrance animation to finish
+}
+
+/* ═════════════════════════════════════════════════════════════
+   V2 — BUILDER DEMO (Intercom Fin-Agent style)
+═════════════════════════════════════════════════════════════ */
+function initBuilderDemo() {
+  const chatEl = document.getElementById('bd-chat-body');
+  if (!chatEl) return;
+
+  const SCRIPT = [
+    { role: 'ai',   text: 'Hi! I\'m your Celevare assistant. Tell me about the role you\'re targeting.',           delay: 600  },
+    { role: 'user', text: 'I want to target VP Product roles at Series B–D tech companies.',                        delay: 2400 },
+    { role: 'ai',   text: 'Perfect. And what\'s your current title and a key achievement from your last role?',    delay: 4000 },
+    { role: 'user', text: 'Director of Product at FinEdge. We scaled to $40M ARR in 18 months.',                   delay: 5900 },
+    { role: 'ai',   text: 'Excellent. Generating your executive resume now — this will take a few seconds…',       delay: 7400 },
+  ];
+
+  const REVEALS = [
+    { id: 'bd-r-name',    delay: 8000,  score: null },
+    { id: 'bd-r-title',   delay: 8400,  score: 38  },
+    { id: 'bd-r-divider', delay: 8700,  score: null },
+    { id: 'bd-r-summary', delay: 9100,  score: 66  },
+    { id: 'bd-r-exp',     delay: 9700,  score: 84  },
+    { id: 'bd-r-skills',  delay: 10300, score: 94  },
+  ];
+
+  let started = false;
+  const section = document.querySelector('.builder-section');
+  if (!section) return;
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !started) {
+        started = true;
+        runDemo();
+        io.unobserve(section);
+      }
+    });
+  }, { threshold: 0.25 });
+  io.observe(section);
+
+  function runDemo() {
+    SCRIPT.forEach(m => setTimeout(() => addMsg(m.role, m.text), m.delay));
+    REVEALS.forEach(r => {
+      setTimeout(() => {
+        const el = document.getElementById(r.id);
+        if (el) el.classList.add('bd-reveal');
+        if (r.score !== null) {
+          const sv = document.getElementById('bd-score-val');
+          if (sv) sv.textContent = r.score;
+        }
+      }, r.delay);
+    });
+  }
+
+  function addMsg(role, text) {
+    const isAi = role === 'ai';
+    const div = document.createElement('div');
+    div.className = `bd-msg bd-msg--${role}`;
+    div.innerHTML = `
+      <div class="bd-av bd-av--${role}">${isAi ? 'AI' : 'You'}</div>
+      <div class="bd-bubble">${text}</div>
+    `;
+    chatEl.appendChild(div);
+    requestAnimationFrame(() => div.classList.add('is-visible'));
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   V2 — LINKEDIN KANBAN (drag to scroll)
+═════════════════════════════════════════════════════════════ */
+function initLinkedInKanban() {
+  const outer = document.querySelector('.kanban-outer');
+  if (!outer) return;
+
+  let isDown = false, startX, scrollLeft, velocity = 0, lastX, rafId;
+
+  outer.addEventListener('mousedown', e => {
+    isDown = true;
+    startX = e.pageX - outer.offsetLeft;
+    scrollLeft = outer.scrollLeft;
+    lastX = e.pageX; velocity = 0;
+    cancelAnimationFrame(rafId);
+    outer.style.userSelect = 'none';
+  });
+  outer.addEventListener('mouseleave', () => { isDown = false; kick(); outer.style.userSelect = ''; });
+  outer.addEventListener('mouseup',    () => { isDown = false; kick(); outer.style.userSelect = ''; });
+  outer.addEventListener('mousemove',  e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - outer.offsetLeft;
+    outer.scrollLeft = scrollLeft - (x - startX) * 1.2;
+    velocity = e.pageX - lastX; lastX = e.pageX;
+  });
+
+  function kick() {
+    const go = () => {
+      if (Math.abs(velocity) < 0.4) return;
+      outer.scrollLeft -= velocity;
+      velocity *= 0.9;
+      rafId = requestAnimationFrame(go);
+    };
+    go();
+  }
+
+  let ts = 0, tsl = 0;
+  outer.addEventListener('touchstart', e => { ts = e.touches[0].clientX; tsl = outer.scrollLeft; }, { passive: true });
+  outer.addEventListener('touchmove',  e => { outer.scrollLeft = tsl + ts - e.touches[0].clientX; }, { passive: true });
+}
+
+/* ═════════════════════════════════════════════════════════════
+   V2 — LOGIN MODAL
+═════════════════════════════════════════════════════════════ */
+function initLoginModal() {
+  const overlay  = document.getElementById('login-overlay');
+  const closeBtn = document.getElementById('login-close');
+  const tabs     = document.querySelectorAll('.login-tab[data-tab]');
+  const panels   = document.querySelectorAll('.login-panel[id]');
+  if (!overlay) return;
+
+  const open = () => {
+    overlay.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    // Focus first input
+    setTimeout(() => {
+      const first = overlay.querySelector('input');
+      if (first) first.focus();
+    }, 200);
+  };
+  const close = () => {
+    overlay.classList.remove('is-open');
+    document.body.style.overflow = '';
+  };
+
+  document.querySelectorAll('[data-login]').forEach(btn =>
+    btn.addEventListener('click', e => { e.preventDefault(); open(); })
+  );
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+
+  // Tab switching
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('is-active'));
+      panels.forEach(p => p.classList.remove('is-active'));
+      tab.classList.add('is-active');
+      const panel = document.getElementById('login-' + tab.dataset.tab);
+      if (panel) panel.classList.add('is-active');
+    });
+  });
+}

@@ -1,0 +1,9 @@
+groq
+sentence-transformers
+streamlit
+streamlit-agraph
+python-dotenv
+requests
+pymdown-extensions
+beautifulsoup4
+pyyaml

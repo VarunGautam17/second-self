@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecondSelf — AI Knowledge Brain</title>
+  
+  <!-- Google Fonts: Manrope & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Vis Network Library -->
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+  <style>
+    /* ============================================================
+       CELEVARE DESIGN SYSTEM TOKENS & TYPOGRAPHY
+       ============================================================ */
+    :root {
+      --bg-warm:        #FAFAF8;
+      --bg-card:        rgba(255, 255, 255, 0.96);
+      --bg-surface:     #F1F5F9;
+      --border-light:   #E2E8F0;
+      --border-emerald: rgba(16, 185, 129, 0.3);
+      
+      --charcoal-900:   #0F172A;
+      --charcoal-800:   #1E293B;
+      --charcoal-700:   #334155;
+      --charcoal-500:   #64748B;
+      --charcoal-400:   #94A3B8;
+      
+      --emerald:        #10B981;
+      --emerald-dark:   #059669;
+      --emerald-light:  #A7F3D0;
+      --emerald-pale:   #ECFDF5;
+      
+      --color-projects: #10B981;
+      --color-areas:    #6366F1;
+      --color-resources:#F59E0B;
+      --color-archives: #EF4444;
+      --color-embeddings:#06B6D4;
+      
+      --font-display:   'Manrope', system-ui, -apple-system, sans-serif;
+      --font-body:      'Inter', system-ui, -apple-system, sans-serif;
+      
+      --r-pill:         9999px;
+      --r-card:         14px;
+      --shadow-sm:      0 2px 6px rgba(0, 0, 0, 0.04);
+      --shadow-md:      0 6px 20px rgba(0, 0, 0, 0.06);
+      --shadow-lg:      0 12px 36px rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-warm);
+      color: var(--charcoal-700);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ════ Top Header Navigation Bar ════ */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-light);
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      font-family: var(--font-body);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: #0F172A;
+    }
+
+    .brand-logo .accent {
+      color: var(--emerald);
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--r-pill);
+      background: var(--emerald-pale);
+      border: 1px solid var(--border-emerald);
+      color: var(--emerald-dark);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .hero-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    /* Mode Switcher Tabs */
+    .mode-switch {
+      display: flex;
+      background: var(--bg-surface);
+      padding: 4px;
+      border-radius: var(--r-pill);
+      border: 1px solid var(--border-light);
+    }
+
+    .mode-btn {
+      background: none;
+      border: none;
+      padding: 6px 18px;
+      border-radius: var(--r-pill);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--charcoal-500);
+      cursor: pointer;
+      transition: all 200ms ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mode-btn.active {
+      background: #FFFFFF;
+      color: var(--charcoal-900);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Filter Toolbar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-btn {
+      background: #FFFFFF;
+      border: 1px solid var(--border-light);
+      color: var(--charcoal-700);
+      padding: 6px 14px;
+      border-radius: var(--r-pill);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .filter-btn:hover {
+      border-color: var(--emerald);
+      color: var(--emerald);
+    }
+
+    .filter-btn.active {
+      background: var(--charcoal-900);
+      color: #FFFFFF;
+      border-color: var(--charcoal-900);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.projects { background-color: var(--color-projects); }
+    .dot.areas { background-color: var(--color-areas); }
+    .dot.resources { background-color: var(--color-resources); }
+    .dot.archives { background-color: var(--color-archives); }
+
+    /* ════ Main Workspace Area ════ */
+    .workspace {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Vis-network Container (Primary Brain Silhouette Topology) */
+    #network-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, #FFFFFF 0%, #FAFAF8 70%, #F1F5F9 100%);
+      z-index: 2;
+    }
+
+    /* 3D Brain Canvas Container */
+    #brain-canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #FFFFFF 0%, #FAFAF8 70%, #F1F5F9 100%);
+      z-index: 3;
+    }
+
+    #brain-canvas {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    #brain-canvas:active {
+      cursor: grabbing;
+    }
+
+    /* Floating Legend Overlay */
+    .brain-legend {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-light);
+      border-radius: var(--r-card);
+      padding: 14px 18px;
+      font-size: 12px;
+      z-index: 10;
+      box-shadow: var(--shadow-md);
+    }
+    
+    .brain-legend-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--charcoal-900);
+      margin-bottom: 6px;
+    }
+
+    .brain-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      color: var(--charcoal-700);
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background 150ms ease;
+    }
+
+    .brain-legend-item:hover {
+      background: var(--bg-surface);
+    }
+
+    /* Custom Vis-Network & Brain Tooltip Styling */
+    #brain-tooltip, div.vis-tooltip {
+      position: absolute;
+      display: none;
+      background: rgba(255, 255, 255, 0.98) !important;
+      color: var(--charcoal-900) !important;
+      border: 1px solid var(--border-emerald) !important;
+      border-radius: var(--r-card) !important;
+      padding: 14px 18px !important;
+      font-family: var(--font-body) !important;
+      font-size: 13px !important;
+      box-shadow: var(--shadow-lg) !important;
+      backdrop-filter: blur(16px) !important;
+      max-width: 300px !important;
+      pointer-events: none !important;
+      z-index: 300 !important;
+    }
+
+    .tt-header {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 14.5px;
+      margin-bottom: 4px;
+      color: var(--charcoal-900);
+    }
+
+    /* Side Inspector Drawer */
+    #inspector {
+      position: absolute;
+      right: 24px;
+      top: 24px;
+      width: 340px;
+      max-height: calc(100vh - 80px);
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-light);
+      border-radius: var(--r-card);
+      padding: 20px;
+      box-shadow: var(--shadow-lg);
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 250;
+      overflow-y: auto;
+    }
+
+    #inspector.active {
+      display: flex;
+    }
+
+    .inspector-close {
+      align-self: flex-end;
+      background: var(--bg-surface);
+      border: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      color: var(--charcoal-700);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .inspector-title {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--charcoal-900);
+    }
+
+    .inspector-section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      color: var(--charcoal-500);
+      margin-top: 4px;
+    }
+
+    .inspector-body {
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--charcoal-700);
+      background: var(--bg-surface);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-light);
+    }
+
+    .tt-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: var(--r-pill);
+      color: #FFFFFF;
+      width: fit-content;
+    }
+
+    .tt-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .tt-tag {
+      font-size: 11px;
+      background: var(--bg-surface);
+      color: var(--charcoal-700);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">Second<span class="accent">Self</span></div>
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        An AI project to imitate your personal brain
+      </div>
+    </div>
+
+    <!-- View Mode Tabs -->
+    <div class="mode-switch">
+      <button class="mode-btn active" id="btn-mode-graph">🧠 Brain Silhouette Graph</button>
+      <button class="mode-btn" id="btn-mode-3d">🌐 3D Neural Mesh</button>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="Projects"><span class="dot projects"></span> Projects</button>
+      <button class="filter-btn" data-filter="Areas"><span class="dot areas"></span> Areas</button>
+      <button class="filter-btn" data-filter="Resources"><span class="dot resources"></span> Resources</button>
+      <button class="filter-btn" data-filter="Archives"><span class="dot archives"></span> Archives</button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="workspace">
+    
+    <!-- Vis-Network Knowledge Brain Silhouette Container -->
+    <div id="network-container"></div>
+
+    <!-- 3D Neural Brain Canvas View -->
+    <div id="brain-canvas-container">
+      <canvas id="brain-canvas"></canvas>
+    </div>
+
+    <!-- Interactive Legend -->
+    <div class="brain-legend">
+      <div class="brain-legend-title">Brain Lobe Topology</div>
+      <div class="brain-legend-item" data-filter="Projects"><span class="dot projects"></span> Frontal Lobe — Projects</div>
+      <div class="brain-legend-item" data-filter="Areas"><span class="dot areas"></span> Parietal Lobe — Areas</div>
+      <div class="brain-legend-item" data-filter="Resources"><span class="dot resources"></span> Occipital Lobe — Resources</div>
+      <div class="brain-legend-item" data-filter="Archives"><span class="dot archives"></span> Temporal Lobe — Archives</div>
+    </div>
+  </div>
+
+  <!-- Custom Tooltip -->
+  <div id="brain-tooltip"></div>
+
+  <!-- Side Inspector Drawer -->
+  <div id="inspector">
+    <button class="inspector-close" id="inspector-close">&times;</button>
+    <span class="tt-badge" id="insp-badge">Projects</span>
+    <h2 class="inspector-title" id="insp-title">Note Details</h2>
+    
+    <div class="inspector-section-label">Summary</div>
+    <div class="inspector-body" id="insp-summary">Summary content goes here...</div>
+
+    <div class="inspector-section-label">Tags</div>
+    <div class="tt-tags" id="insp-tags"></div>
+
+    <div class="inspector-section-label">Content Preview</div>
+    <div class="inspector-body" id="insp-preview">Content preview...</div>
+  </div>
+
+  <script>
+    /* ============================================================
+       CELEVARE COLOR & CATEGORY MAPPING
+       ============================================================ */
+    const PARA_COLORS = {
+      Projects:  { background: '#10B981', border: '#059669', highlight: '#34D399', text: '#FFFFFF' },
+      Areas:     { background: '#6366F1', border: '#4F46E5', highlight: '#818CF8', text: '#FFFFFF' },
+      Resources: { background: '#F59E0B', border: '#D97706', highlight: '#FBBF24', text: '#FFFFFF' },
+      Archives:  { background: '#EF4444', border: '#DC2626', highlight: '#F87171', text: '#FFFFFF' },
+      Default:   { background: '#3B82F6', border: '#2563EB', highlight: '#60A5FA', text: '#FFFFFF' }
+    };
+
+    /* ============================================================
+       EXACT LATERAL HUMAN BRAIN SILHOUETTE ANCHOR GRID
+       ============================================================ */
+    const BRAIN_PROFILE_ANCHORS = [
+      // 1. Frontal Lobe (Left / Front curvature)
+      { x: -340, y: -20,  para: 'Projects' },
+      { x: -370, y: -70,  para: 'Projects' },
+      { x: -360, y: -130, para: 'Projects' },
+      { x: -320, y: -190, para: 'Projects' },
+      { x: -250, y: -230, para: 'Projects' },
+      
+      // 2. Parietal Lobe (Top Cerebral Arch)
+      { x: -160, y: -255, para: 'Areas' },
+      { x: -70,  y: -270, para: 'Areas' },
+      { x:  30,  y: -265, para: 'Areas' },
+      { x:  130, y: -240, para: 'Areas' },
+      { x:  220, y: -200, para: 'Areas' },
+      
+      // 3. Occipital Lobe (Rear / Right curvature)
+      { x:  300, y: -140, para: 'Resources' },
+      { x:  340, y: -70,  para: 'Resources' },
+      { x:  350, y:  0,    para: 'Resources' },
+      { x:  330, y:  70,   para: 'Resources' },
+      { x:  270, y:  120,  para: 'Resources' },
+      
+      // 4. Cerebellum & Brainstem (Lower Rear Base / Pointing Down)
+      { x:  220, y:  180, para: 'Resources' },
+      { x:  160, y:  230, para: 'Resources' },
+      { x:  90,  y:  265, para: 'Resources' }, // Brainstem Tip
+      { x:  30,  y:  200, para: 'Archives'  },
+      { x:  80,  y:  140, para: 'Archives'  },
+      
+      // 5. Temporal Lobe (Lower Left / Frontal Notch)
+      { x: -40,  y:  120, para: 'Archives' },
+      { x: -120, y:  135, para: 'Archives' },
+      { x: -220, y:  110, para: 'Archives' },
+      { x: -290, y:  65,  para: 'Archives' },
+      { x: -320, y:  10,  para: 'Projects' },
+      
+      // 6. Deep Brain Cortex Grid (Internal Connections)
+      { x: -240, y: -130, para: 'Projects' },
+      { x: -160, y: -170, para: 'Projects' },
+      { x: -80,  y: -180, para: 'Areas'    },
+      { x:  20,  y: -175, para: 'Areas'    },
+      { x:  120, y: -140, para: 'Areas'    },
+      { x:  210, y: -100, para: 'Resources'},
+      { x:  240, y: -20,  para: 'Resources'},
+      { x:  160, y:  20,   para: 'Resources'},
+      { x:  70,  y: -20,   para: 'Areas'    },
+      { x: -30,  y: -40,   para: 'Archives' },
+      { x: -130, y: -50,   para: 'Projects' },
+      { x: -220, y: -45,   para: 'Projects' },
+      { x: -180, y:  30,   para: 'Archives' },
+      { x: -90,  y:  45,   para: 'Archives' },
+      { x:  0,    y:  55,   para: 'Archives' },
+      { x:  90,  y:  60,   para: 'Resources'},
+      { x:  170, y:  90,   para: 'Resources'}
+    ];
+
+    // Structural Mesh Edges connecting adjacent anchor points to enforce brain shape
+    const STRUCTURAL_EDGES = [
+      // Outer Perimeter Loop
+      [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13],[13,14],[14,15],[15,16],[16,17],[17,18],[18,19],[19,20],[20,21],[21,22],[22,23],[23,24],[24,0],
+      // Interior Brain Cross Pathways
+      [0,25],[25,26],[26,27],[27,28],[28,29],[29,30],[30,31],[31,32],[32,33],[33,34],[34,35],[35,36],[36,37],[37,38],[38,39],[39,40],[40,41],
+      [2,25],[4,26],[6,27],[8,28],[10,29],[12,30],[14,31],[16,32],[19,37],[21,36],[23,35],[25,34],[26,33],[27,32]
+    ];
+
+    let network = null;
+    let allNodes = [];
+    let allEdges = [];
+    let nodesDataSet = null;
+    let edgesDataSet = null;
+    let activeFilter = 'all';
+
+    /* ============================================================
+       1. ANATOMICAL 3D HUMAN BRAIN CANVAS ENGINE
+       ============================================================ */
+    const canvas = document.getElementById('brain-canvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('brain-tooltip');
+    
+    let width = 0, height = 0;
+    let particles = [];
+    let noteParticles = [];
+    let rotationY = 0.4;
+    let rotationX = 0.2;
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let hoveredParticle = null;
+    let animFrameId = null;
+
+    // Mouse Interaction Handlers for 3D Orbit Controls
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const deltaX = e.clientX - lastMouseX;
+        const deltaY = e.clientY - lastMouseY;
+        rotationY += deltaX * 0.006;
+        rotationX += deltaY * 0.006;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+      } else {
+        checkBrainHover(e);
+      }
+    });
+
+    canvas.addEventListener('click', (e) => {
+      if (hoveredParticle && hoveredParticle.rawNode) {
+        showInspector(hoveredParticle.rawNode);
+      }
+    });
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      width = canvas.width = canvas.parentElement.clientWidth || window.innerWidth;
+      height = canvas.height = canvas.parentElement.clientHeight || window.innerHeight;
+      buildAnatomicalBrainMesh();
+    }
+
+    function buildAnatomicalBrainMesh() {
+      particles = [];
+      const count = 450;
+
+      for (let i = 0; i < count; i++) {
+        let u = Math.random() * Math.PI * 2;
+        let v = Math.random() * Math.PI - Math.PI / 2;
+
+        let rx = 160 * Math.cos(v) * Math.cos(u);
+        let ry = 120 * Math.sin(v);
+        let rz = 200 * Math.cos(v) * Math.sin(u);
+
+        if (rx > 0) rx += 12;
+        else rx -= 12;
+
+        let fold = (Math.sin(u * 6) + Math.cos(v * 6)) * 12;
+        rx += fold * 0.4;
+        ry += fold * 0.4;
+        rz += fold * 0.4;
+
+        let category = 'Projects';
+        let color = '#10B981';
+
+        if (ry < -30 && rz < -20) {
+          category = 'Embeddings';
+          color = '#06B6D4';
+          rx *= 0.65;
+        } else if (rz < -60 && ry < 20) {
+          category = 'Resources';
+          color = '#F59E0B';
+        } else if (rz > 30 && ry > 0) {
+          category = 'Projects';
+          color = '#10B981';
+        } else if (ry > 25) {
+          category = 'Areas';
+          color = '#6366F1';
+        } else if (Math.abs(rx) > 75) {
+          category = 'Archives';
+          color = '#EF4444';
+        }
+
+        particles.push({
+          x: rx, y: ry, z: rz,
+          size: Math.random() * 2.0 + 1.2,
+          color: color,
+          category: category,
+          pulse: Math.random() * Math.PI * 2,
+          pulseSpeed: 0.02 + Math.random() * 0.03
+        });
+      }
+
+      mapNotesToBrainLobes();
+    }
+
+    function mapNotesToBrainLobes() {
+      noteParticles = [];
+      if (!allNodes || allNodes.length === 0) return;
+
+      allNodes.forEach((node, idx) => {
+        const category = node.para || 'Projects';
+        const colors = PARA_COLORS[category] || PARA_COLORS.Default;
+
+        let rx = 0, ry = 0, rz = 0;
+
+        if (category === 'Projects') {
+          rx = (Math.random() - 0.5) * 140;
+          ry = Math.random() * 60 + 10;
+          rz = Math.random() * 80 + 30;
+        } else if (category === 'Areas') {
+          rx = (Math.random() - 0.5) * 140;
+          ry = Math.random() * 60 + 30;
+          rz = (Math.random() - 0.5) * 80;
+        } else if (category === 'Resources') {
+          rx = (Math.random() - 0.5) * 120;
+          ry = (Math.random() - 0.5) * 50;
+          rz = -Math.random() * 80 - 40;
+        } else if (category === 'Archives') {
+          rx = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 50 + 70);
+          ry = (Math.random() - 0.5) * 50;
+          rz = (Math.random() - 0.5) * 60;
+        } else {
+          rx = (Math.random() - 0.5) * 60;
+          ry = -Math.random() * 50 - 30;
+          rz = -Math.random() * 60 - 20;
+        }
+
+        noteParticles.push({
+          id: node.id,
+          x: rx, y: ry, z: rz,
+          size: 5.0,
+          color: colors.background,
+          category: category,
+          label: node.id,
+          rawNode: node,
+          pulse: idx * 0.5
+        });
+      });
+    }
+
+    let projectedPoints = [];
+
+    function renderBrain3D() {
+      if (container3D.style.display === 'none') {
+        animFrameId = requestAnimationFrame(renderBrain3D);
+        return;
+      }
+      ctx.clearRect(0, 0, width, height);
+
+      if (!isDragging) {
+        rotationY += 0.002;
+        rotationX = Math.sin(rotationY * 0.5) * 0.1;
+      }
+
+      const cosY = Math.cos(rotationY);
+      const sinY = Math.sin(rotationY);
+      const cosX = Math.cos(rotationX);
+      const sinX = Math.sin(rotationX);
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      projectedPoints = [];
+
+      particles.forEach(p => {
+        p.pulse += p.pulseSpeed;
+
+        let x1 = p.x * cosY - p.z * sinY;
+        let z1 = p.z * cosY + p.x * sinY;
+        let y1 = p.y * cosX - z1 * sinX;
+        let z2 = z1 * cosX + p.y * sinX;
+
+        const perspective = 500 / (500 + z2);
+        const px = x1 * perspective + centerX;
+        const py = -y1 * perspective + centerY;
+
+        const isFilteredOut = (activeFilter !== 'all' && p.category !== activeFilter);
+        const alpha = isFilteredOut ? 0.05 : Math.max(0.12, (z2 + 200) / 400) * (0.6 + Math.sin(p.pulse) * 0.4);
+
+        projectedPoints.push({
+          x: px, y: py, z: z2, scale: perspective,
+          color: p.color, alpha: alpha, size: p.size,
+          category: p.category, isNote: false
+        });
+      });
+
+      noteParticles.forEach(np => {
+        np.pulse += 0.02;
+
+        let x1 = np.x * cosY - np.z * sinY;
+        let z1 = np.z * cosY + np.x * sinY;
+        let y1 = np.y * cosX - z1 * sinX;
+        let z2 = z1 * cosX + np.y * sinX;
+
+        const perspective = 500 / (500 + z2);
+        const px = x1 * perspective + centerX;
+        const py = -y1 * perspective + centerY;
+
+        const isFilteredOut = (activeFilter !== 'all' && np.category !== activeFilter);
+        const alpha = isFilteredOut ? 0.1 : 1.0;
+
+        projectedPoints.push({
+          x: px, y: py, z: z2, scale: perspective,
+          color: np.color, alpha: alpha, size: np.size * perspective,
+          category: np.category, isNote: true, label: np.label, rawNode: np.rawNode
+        });
+      });
+
+      projectedPoints.sort((a, b) => a.z - b.z);
+
+      const connectionDist = 45;
+      ctx.lineWidth = 0.6;
+      for (let i = 0; i < projectedPoints.length; i += 5) {
+        for (let j = i + 1; j < projectedPoints.length; j += 8) {
+          const p1 = projectedPoints[i];
+          const p2 = projectedPoints[j];
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < connectionDist) {
+            const alpha = (1 - dist / connectionDist) * 0.18 * Math.min(p1.alpha, p2.alpha);
+            ctx.strokeStyle = p1.category === p2.category ? p1.color : 'rgba(59, 130, 246, 0.15)';
+            ctx.globalAlpha = alpha;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      projectedPoints.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (p.isNote && p.alpha > 0.3) {
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.alpha * 0.3;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 2.0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#0F172A';
+          ctx.font = '600 10px Inter';
+          ctx.globalAlpha = p.alpha * 0.85;
+          ctx.fillText(p.label, p.x + 8, p.y + 3);
+        }
+      });
+
+      ctx.globalAlpha = 1.0;
+      animFrameId = requestAnimationFrame(renderBrain3D);
+    }
+
+    function checkBrainHover(e) {
+      if (container3D.style.display === 'none') return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      let found = null;
+      for (let i = projectedPoints.length - 1; i >= 0; i--) {
+        const p = projectedPoints[i];
+        if (p.isNote && p.alpha > 0.3) {
+          const dx = mx - p.x;
+          const dy = my - p.y;
+          if (Math.sqrt(dx * dx + dy * dy) < 12) {
+            found = p;
+            break;
+          }
+        }
+      }
+
+      hoveredParticle = found;
+      if (found) {
+        canvas.style.cursor = 'pointer';
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 14) + 'px';
+        tooltip.style.top = (e.clientY + 14) + 'px';
+        tooltip.innerHTML = `
+          <strong style="color:#0F172A; font-size:13px;">Note ID: ${found.label}</strong><br/>
+          <span class="tt-badge" style="background:${found.color}; font-size:10px; padding:2px 8px; margin-top:4px;">${found.category}</span>
+          <div style="margin-top:6px; color:#475569; font-size:12px;">${found.rawNode.summary || 'Click to view full note...'}</div>
+        `;
+      } else {
+        canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
+        tooltip.style.display = 'none';
+      }
+    }
+
+    /* ============================================================
+       2. LOAD GRAPH DATA & BUILD BRAIN TOPOLOGY
+       ============================================================ */
+    async function loadGraphData() {
+      if (window.INLINE_GRAPH_DATA && window.INLINE_GRAPH_DATA.nodes) {
+        return window.INLINE_GRAPH_DATA;
+      }
+      const candidatePaths = ['../graph.json', 'graph.json', '/graph.json', '../data/graph.json', './data/graph.json'];
+      for (const path of candidatePaths) {
+        try {
+          const res = await fetch(path);
+          if (res.ok) return await res.json();
+        } catch (e) {}
+      }
+      return { nodes: [], edges: [] };
+    }
+
+    function initBrainNetwork(graphData) {
+      allNodes = graphData.nodes || [];
+      allEdges = graphData.edges || [];
+
+      // Initial Canvas Build
+      resizeCanvas();
+      renderBrain3D();
+
+      const visNodes = [];
+      const visEdges = [];
+
+      const mappedNodeIds = new Set();
+      
+      allNodes.forEach((node, i) => {
+        const anchor = BRAIN_PROFILE_ANCHORS[i % BRAIN_PROFILE_ANCHORS.length];
+        const colors = PARA_COLORS[node.para] || PARA_COLORS.Default;
+        mappedNodeIds.add(node.id);
+
+        const tagPills = (node.tags || []).map(t => `<span class="tt-tag">#${t}</span>`).join('');
+        const tooltipHtml = `
+          <div class="tt-header">${node.id}</div>
+          <span class="tt-badge" style="background:${colors.background};">${node.para}</span>
+          <div style="margin-top:6px; color:#334155; font-size:12.5px;">${node.summary || 'No summary available.'}</div>
+          <div class="tt-tags" style="margin-top:8px;">${tagPills}</div>
+        `;
+
+        visNodes.push({
+          id: node.id,
+          label: node.id,
+          title: tooltipHtml,
+          x: anchor.x,
+          y: anchor.y,
+          shape: 'dot',
+          size: 26,
+          font: { color: '#0F172A', face: 'Inter', size: 12, weight: '700' },
+          color: {
+            background: colors.background,
+            border: colors.border,
+            highlight: { background: colors.highlight, border: '#0F172A' }
+          },
+          shadow: { enabled: true, color: 'rgba(0,0,0,0.12)', size: 10, x: 0, y: 4 },
+          rawNode: node,
+          isRealNote: true
+        });
+      });
+
+      BRAIN_PROFILE_ANCHORS.forEach((anchor, idx) => {
+        const sId = `struct_node_${idx}`;
+        if (idx >= allNodes.length) {
+          const colors = PARA_COLORS[anchor.para] || PARA_COLORS.Default;
+          visNodes.push({
+            id: sId,
+            x: anchor.x,
+            y: anchor.y,
+            shape: 'dot',
+            size: 12,
+            color: {
+              background: colors.background,
+              border: colors.border,
+              highlight: { background: colors.highlight, border: '#0F172A' }
+            },
+            opacity: 0.85,
+            shadow: { enabled: false },
+            isRealNote: false
+          });
+        }
+      });
+
+      allEdges.forEach(edge => {
+        if (mappedNodeIds.has(edge.source) && mappedNodeIds.has(edge.target)) {
+          visEdges.push({
+            from: edge.source,
+            to: edge.target,
+            color: { color: '#10B981', highlight: '#059669' },
+            width: 3.5,
+            smooth: false
+          });
+        }
+      });
+
+      STRUCTURAL_EDGES.forEach(([i1, i2]) => {
+        const id1 = i1 < allNodes.length ? allNodes[i1].id : `struct_node_${i1}`;
+        const id2 = i2 < allNodes.length ? allNodes[i2].id : `struct_node_${i2}`;
+
+        visEdges.push({
+          from: id1,
+          to: id2,
+          color: { color: 'rgba(59, 130, 246, 0.45)', highlight: '#3B82F6' },
+          width: 1.8,
+          dashes: [4, 4],
+          smooth: false
+        });
+      });
+
+      nodesDataSet = new vis.DataSet(visNodes);
+      edgesDataSet = new vis.DataSet(visEdges);
+
+      const container = document.getElementById('network-container');
+      const data = { nodes: nodesDataSet, edges: edgesDataSet };
+
+      const options = {
+        nodes: { borderWidth: 2, borderWidthSelected: 4 },
+        edges: { selectionWidth: 2 },
+        physics: { enabled: false },
+        interaction: {
+          hover: true,
+          tooltipDelay: 100,
+          zoomView: true,
+          dragNodes: true,
+          dragView: true
+        }
+      };
+
+      network = new vis.Network(container, data, options);
+      network.fit();
+
+      network.on('click', function (params) {
+        if (params.nodes.length > 0) {
+          const nodeId = params.nodes[0];
+          const nodeData = nodesDataSet.get(nodeId);
+          if (nodeData && nodeData.rawNode) {
+            showInspector(nodeData.rawNode);
+          }
+        } else {
+          hideInspector();
+        }
+      });
+    }
+
+    /* ============================================================
+       SIDE INSPECTOR & FILTERING
+       ============================================================ */
+    function showInspector(node) {
+      const inspector = document.getElementById('inspector');
+      const colors = PARA_COLORS[node.para] || PARA_COLORS.Default;
+      
+      const badge = document.getElementById('insp-badge');
+      badge.textContent = node.para;
+      badge.style.backgroundColor = colors.background;
+
+      document.getElementById('insp-title').textContent = `Note ID: ${node.id}`;
+      document.getElementById('insp-summary').textContent = node.summary || 'No summary available.';
+      document.getElementById('insp-preview').textContent = node.content_preview || 'No content preview available.';
+
+      const tagsContainer = document.getElementById('insp-tags');
+      tagsContainer.innerHTML = (node.tags || []).map(t => `<span class="tt-tag">#${t}</span>`).join('');
+
+      inspector.classList.add('active');
+    }
+
+    function hideInspector() {
+      document.getElementById('inspector').classList.remove('active');
+    }
+
+    document.getElementById('inspector-close').addEventListener('click', hideInspector);
+
+    function applyFilter(cat) {
+      activeFilter = cat;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-filter') === cat);
+      });
+
+      if (nodesDataSet) {
+        if (cat === 'all') {
+          nodesDataSet.forEach(node => nodesDataSet.update({ id: node.id, hidden: false }));
+        } else {
+          nodesDataSet.forEach(node => {
+            if (node.isRealNote) {
+              nodesDataSet.update({ id: node.id, hidden: node.rawNode.para !== cat });
+            }
+          });
+        }
+      }
+    }
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => applyFilter(btn.getAttribute('data-filter')));
+    });
+
+    document.querySelectorAll('.brain-legend-item').forEach(item => {
+      item.addEventListener('click', () => applyFilter(item.getAttribute('data-filter')));
+    });
+
+    // View Switcher (Brain Silhouette Graph vs 3D Neural Mesh)
+    const btnModeGraph = document.getElementById('btn-mode-graph');
+    const btnMode3D = document.getElementById('btn-mode-3d');
+    const containerGraph = document.getElementById('network-container');
+    const container3D = document.getElementById('brain-canvas-container');
+
+    btnModeGraph.addEventListener('click', () => {
+      btnModeGraph.classList.add('active');
+      btnMode3D.classList.remove('active');
+      containerGraph.style.display = 'block';
+      container3D.style.display = 'none';
+      if (network) network.fit();
+    });
+
+    btnMode3D.addEventListener('click', () => {
+      btnMode3D.classList.add('active');
+      btnModeGraph.classList.remove('active');
+      containerGraph.style.display = 'none';
+      container3D.style.display = 'flex';
+      resizeCanvas();
+    });
+
+    // Load Data and Initialize
+    loadGraphData().then(initBrainNetwork);
+  </script>
+</body>
+</html>
