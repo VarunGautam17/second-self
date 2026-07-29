@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import uuid
+import shutil
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -20,6 +21,8 @@ from lib.models import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Legacy defaults for CLI / backward compatibility
 RAW_DIR = PROJECT_ROOT / "raw"
 WIKI_DIR = PROJECT_ROOT / "wiki"
 DATA_DIR = PROJECT_ROOT / "data"
@@ -31,12 +34,88 @@ CONTENT_FILENAMES = {
 }
 
 
+def get_current_user_slug() -> str | None:
+    """Return active user_slug from Streamlit session_state if running in web context."""
+    try:
+        import streamlit as st
+        if "user_slug" in st.session_state and st.session_state["user_slug"]:
+            return st.session_state["user_slug"]
+    except Exception:
+        pass
+    return None
+
+
+def get_user_base_dir() -> Path:
+    """Return base directory path for current session user or fallback to project root."""
+    slug = get_current_user_slug()
+    if slug:
+        return PROJECT_ROOT / "users" / slug
+    return PROJECT_ROOT
+
+
+def get_raw_dir() -> Path:
+    """Return active raw capture directory."""
+    return get_user_base_dir() / "raw"
+
+
+def get_wiki_dir() -> Path:
+    """Return active wiki directory."""
+    return get_user_base_dir() / "wiki"
+
+
+def get_data_dir() -> Path:
+    """Return active data directory."""
+    return get_user_base_dir() / "data"
+
+
+def get_index_path() -> Path:
+    """Return active index.json path."""
+    return get_data_dir() / "index.json"
+
+
 def ensure_dirs() -> None:
-    """Create required project directories if missing."""
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    """Create required project directories for active user if missing."""
+    raw_dir = get_raw_dir()
+    wiki_dir = get_wiki_dir()
+    data_dir = get_data_dir()
+
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    data_dir.mkdir(parents=True, exist_ok=True)
     for category in PARA_CATEGORIES:
-        (WIKI_DIR / category).mkdir(parents=True, exist_ok=True)
+        (wiki_dir / category).mkdir(parents=True, exist_ok=True)
+
+
+def init_user_workspace(user_slug: str, copy_demo_data: bool = False) -> Path:
+    """Initialize user workspace in users/<user_slug>/, optionally seeding demo data."""
+    user_base = PROJECT_ROOT / "users" / user_slug
+    user_raw = user_base / "raw"
+    user_wiki = user_base / "wiki"
+    user_data = user_base / "data"
+
+    user_raw.mkdir(parents=True, exist_ok=True)
+    user_data.mkdir(parents=True, exist_ok=True)
+    for category in PARA_CATEGORIES:
+        (user_wiki / category).mkdir(parents=True, exist_ok=True)
+
+    if copy_demo_data:
+        demo_wiki = PROJECT_ROOT / "wiki"
+        if demo_wiki.is_dir():
+            for cat in PARA_CATEGORIES:
+                src_cat = demo_wiki / cat
+                dst_cat = user_wiki / cat
+                if src_cat.is_dir():
+                    for f in src_cat.glob("*.md"):
+                        if not (dst_cat / f.name).exists():
+                            shutil.copy2(f, dst_cat / f.name)
+
+        demo_data = PROJECT_ROOT / "data"
+        if demo_data.is_dir():
+            for fname in ["graph.json", "index.json", "embeddings.pkl"]:
+                src_file = demo_data / fname
+                if src_file.is_file() and not (user_data / fname).is_file():
+                    shutil.copy2(src_file, user_data / fname)
+
+    return user_base
 
 
 def generate_capture_id() -> tuple[str, str]:
@@ -96,7 +175,7 @@ def write_raw_capture(meta: CaptureMeta, content: bytes | str) -> Path:
         meta.content_hash = content_hash(content_bytes)
 
     folder_id = meta.folder_id
-    capture_dir = RAW_DIR / folder_id
+    capture_dir = get_raw_dir() / folder_id
     capture_dir.mkdir(parents=True, exist_ok=True)
 
     content_name = _content_filename(meta.type, meta.original_filename)
@@ -166,11 +245,12 @@ def read_raw_captures(*, unprocessed_only: bool = False) -> list[RawCapture]:
     ensure_dirs()
     index = load_index() if unprocessed_only else None
     captures: list[RawCapture] = []
+    raw_dir = get_raw_dir()
 
-    if not RAW_DIR.is_dir():
+    if not raw_dir.is_dir():
         return captures
 
-    for capture_dir in sorted(RAW_DIR.iterdir()):
+    for capture_dir in sorted(raw_dir.iterdir()):
         if not capture_dir.is_dir():
             continue
         raw = _parse_raw_capture(capture_dir)
@@ -187,13 +267,14 @@ def read_raw_captures(*, unprocessed_only: bool = False) -> list[RawCapture]:
 def load_index() -> IndexState:
     """Load data/index.json, initializing defaults if missing or corrupt."""
     ensure_dirs()
-    if not INDEX_PATH.is_file():
+    index_path = get_index_path()
+    if not index_path.is_file():
         state = IndexState()
         save_index(state)
         return state
 
     try:
-        data = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+        data = json.loads(index_path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             raise ValueError("index.json root must be an object")
         return IndexState.from_dict(data)
@@ -204,22 +285,24 @@ def load_index() -> IndexState:
 def save_index(state: IndexState) -> None:
     """Atomically write data/index.json."""
     ensure_dirs()
-    tmp_path = INDEX_PATH.with_suffix(".json.tmp")
+    index_path = get_index_path()
+    tmp_path = index_path.with_suffix(".json.tmp")
     tmp_path.write_text(
         json.dumps(state.to_dict(), indent=2) + "\n",
         encoding="utf-8",
     )
-    tmp_path.replace(INDEX_PATH)
+    tmp_path.replace(index_path)
 
 
 def write_wiki_note(note: WikiNote) -> Path:
     """Write wiki/{para}/{id}.md with YAML frontmatter and body."""
     ensure_dirs()
+    wiki_dir = get_wiki_dir()
 
     if note.para not in PARA_CATEGORIES:
         raise ValueError(f"Invalid PARA category: {note.para}")
 
-    note_path = WIKI_DIR / note.para / f"{note.id}.md"
+    note_path = wiki_dir / note.para / f"{note.id}.md"
     frontmatter = {
         "id": note.id,
         "raw_id": note.raw_id,
@@ -272,10 +355,11 @@ def _parse_wiki_note(note_path: Path) -> WikiNote | None:
 def read_wiki_notes() -> list[WikiNote]:
     """Parse all wiki/**/*.md notes."""
     ensure_dirs()
+    wiki_dir = get_wiki_dir()
     notes: list[WikiNote] = []
 
     for category in PARA_CATEGORIES:
-        category_dir = WIKI_DIR / category
+        category_dir = wiki_dir / category
         if not category_dir.is_dir():
             continue
         for note_path in sorted(category_dir.glob("*.md")):
@@ -289,9 +373,10 @@ def read_wiki_notes() -> list[WikiNote]:
 def delete_wiki_note(note_id: str) -> bool:
     """Delete a wiki note Markdown file by ID across all PARA categories."""
     ensure_dirs()
+    wiki_dir = get_wiki_dir()
     deleted = False
     for category in PARA_CATEGORIES:
-        note_path = WIKI_DIR / category / f"{note_id}.md"
+        note_path = wiki_dir / category / f"{note_id}.md"
         if note_path.is_file():
             try:
                 note_path.unlink()
@@ -305,7 +390,7 @@ def write_graph_json(nodes: list[dict], edges: list[dict], output_path: Path | N
     """Write serialized nodes and edges to graph.json atomically."""
     ensure_dirs()
     if output_path is None:
-        output_path = PROJECT_ROOT / "graph.json"
+        output_path = get_data_dir() / "graph.json"
 
     graph_data = {
         "nodes": nodes,

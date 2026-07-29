@@ -45,10 +45,12 @@ error.txt
 secondself/wiki/**
 secondself/raw/**
 secondself/data/**
+secondself/users/**
 secondself/graph.json
 wiki/**
 raw/**
 data/**
+users/**
 *.json
 
 # Preserve directory structures in git

@@ -47,11 +47,15 @@ def cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
         return 0.0
     return float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
 
+def get_embeddings_path() -> Path:
+    """Return active embeddings.pkl path for current session user."""
+    return storage.get_data_dir() / "embeddings.pkl"
+
 def save_embeddings(embeddings_dict: dict[str, np.ndarray], output_path: Path | None = None) -> Path:
-    """Save note embeddings dictionary {note_id: np.ndarray} to data/embeddings.pkl."""
+    """Save note embeddings dictionary {note_id: np.ndarray} to active data/embeddings.pkl."""
     storage.ensure_dirs()
     if output_path is None:
-        output_path = EMBEDDINGS_PKL_PATH
+        output_path = get_embeddings_path()
 
     tmp_path = output_path.with_suffix(".pkl.tmp")
     with open(tmp_path, "wb") as f:
@@ -60,9 +64,9 @@ def save_embeddings(embeddings_dict: dict[str, np.ndarray], output_path: Path | 
     return output_path
 
 def load_embeddings(input_path: Path | None = None) -> dict[str, np.ndarray]:
-    """Load note embeddings dictionary {note_id: np.ndarray} from data/embeddings.pkl."""
+    """Load note embeddings dictionary {note_id: np.ndarray} from active data/embeddings.pkl."""
     if input_path is None:
-        input_path = EMBEDDINGS_PKL_PATH
+        input_path = get_embeddings_path()
 
     if not input_path.is_file():
         return {}

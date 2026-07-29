@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 import streamlit as st
@@ -314,11 +315,11 @@ def get_embedding_model():
 
 
 @st.cache_data
-def get_graph_data():
-    """Load graph dataset from graph.json."""
-    graph_path = storage.PROJECT_ROOT / "graph.json"
+def get_graph_data(user_slug: str | None = None):
+    """Load graph dataset from user's data/graph.json."""
+    graph_path = storage.get_data_dir() / "graph.json"
     if not graph_path.exists():
-        graph_path = storage.DATA_DIR / "graph.json"
+        graph_path = storage.PROJECT_ROOT / "graph.json"
     if graph_path.exists():
         try:
             return json.loads(graph_path.read_text(encoding="utf-8"))
@@ -328,8 +329,8 @@ def get_graph_data():
 
 
 @st.cache_data
-def get_wiki_stats():
-    """Compute wiki note category counts and total statistics."""
+def get_wiki_stats(user_slug: str | None = None):
+    """Compute wiki note category counts and total statistics for active user."""
     notes = storage.read_wiki_notes()
     counts = {"Projects": 0, "Areas": 0, "Resources": 0, "Archives": 0}
     for note in notes:
@@ -452,11 +453,93 @@ def handle_uploaded_file(uploaded_file):
     st.sidebar.success(f"Uploaded '{uploaded_file.name}' ({len(captured_text)} chars) -> raw/{saved_dir.name}")
 
 
+def render_auth_screen():
+    """Render landing screen prompting user for Name and Groq API Key."""
+    st.markdown("""
+    <div style='text-align: center; padding-top: 30px; padding-bottom: 20px;'>
+        <h1 style='font-size: 3.5rem; font-weight: 800; font-family: "Manrope", "Inter", sans-serif; color: #0F172A; letter-spacing: -0.04em; margin-bottom: 8px;'>
+            Second<span style='color: #10B981;'>Self</span>
+        </h1>
+        <p style='font-size: 1.15rem; color: #64748B; max-width: 600px; margin: 0 auto 24px auto; font-family: "Inter", sans-serif;'>
+            Your private, AI-powered Personal Knowledge Brain. Sign in with your name and Groq API key to access your personalized workspace.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2.2, 1])
+    with col2:
+        with st.form("auth_form", clear_on_submit=False):
+            st.markdown("### 🔑 Access Your 2nd Brain")
+            user_name_input = st.text_input("Your Name / Username", placeholder="e.g. Varun Gautam")
+            groq_key_input = st.text_input(
+                "Groq API Key",
+                type="password",
+                placeholder="gsk_...",
+                help="Enter your personal Groq API key from console.groq.com"
+            )
+            seed_demo = st.checkbox(
+                "Load Demo Knowledge Base (Pre-populates sample PARA notes & graph)",
+                value=True
+            )
+
+            submitted = st.form_submit_button("Enter My 2nd Brain 🚀", use_container_width=True)
+
+            if submitted:
+                clean_name = user_name_input.strip()
+                clean_key = groq_key_input.strip()
+
+                if not clean_name:
+                    st.error("Please enter your name or username to identify your 2nd brain.")
+                    return
+
+                # If user left API key empty, fallback to server secrets / env if available
+                if not clean_key:
+                    if "GROQ_API_KEY" in st.secrets:
+                        clean_key = st.secrets["GROQ_API_KEY"]
+                    else:
+                        clean_key = os.environ.get("GROQ_API_KEY", "")
+
+                if not clean_key:
+                    st.error("Please enter your Groq API Key. Get a free key at https://console.groq.com/")
+                    return
+
+                with st.spinner("Validating Groq API key..."):
+                    valid, msg = llm.validate_groq_api_key(clean_key)
+
+                if not valid:
+                    st.error(msg)
+                    return
+
+                # Create clean slug for user folder (e.g. "varun_gautam")
+                user_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', clean_name.lower())
+                storage.init_user_workspace(user_slug, copy_demo_data=seed_demo)
+
+                st.session_state["user_name"] = clean_name
+                st.session_state["user_slug"] = user_slug
+                st.session_state["groq_api_key"] = clean_key
+                st.session_state["user_authenticated"] = True
+
+                st.cache_data.clear()
+                st.success(f"Welcome back, {clean_name}!")
+                st.rerun()
+
+
 def main():
-    # Load model and stats
+    # 1. User Authentication Check
+    if "user_authenticated" not in st.session_state:
+        st.session_state["user_authenticated"] = False
+
+    if not st.session_state["user_authenticated"]:
+        render_auth_screen()
+        return
+
+    user_name = st.session_state.get("user_name", "User")
+    user_slug = st.session_state.get("user_slug", "default")
+
+    # Load model and stats for active user session
     emb_model = get_embedding_model()
-    wiki_stats = get_wiki_stats()
-    graph_data = get_graph_data()
+    wiki_stats = get_wiki_stats(user_slug)
+    graph_data = get_graph_data(user_slug)
 
     # Initialize RAG input session state
     if "rag_query_input" not in st.session_state:
@@ -467,19 +550,17 @@ def main():
         st.markdown("<h2 style='margin-bottom:0px; font-weight:800; font-family:\"Inter\", sans-serif; color:#0F172A; letter-spacing:-0.035em; display:inline-block;'>Second<span style='color:#10B981;'>Self</span></h2>", unsafe_allow_html=True)
         st.caption("Personal Knowledge Intelligence")
 
-        # API Key Status Check
-        api_key = os.environ.get("GROQ_API_KEY")
-        if not api_key:
-            try:
-                if "GROQ_API_KEY" in st.secrets:
-                    api_key = st.secrets["GROQ_API_KEY"]
-                    os.environ["GROQ_API_KEY"] = api_key
-            except Exception:
-                pass
-        if api_key:
-            st.success("Groq API Connected", icon="✅")
-        else:
-            st.warning("GROQ_API_KEY missing in .env / Secrets")
+        # Active User Identity Badge & Logout
+        st.info(f"👤 Logged in as **{user_name}**")
+        st.success("Groq API Connected", icon="✅")
+
+        if st.button("Switch User / Log Out 🚪", key="btn_logout", use_container_width=True):
+            st.session_state["user_authenticated"] = False
+            st.session_state["user_name"] = ""
+            st.session_state["user_slug"] = ""
+            st.session_state["groq_api_key"] = ""
+            st.cache_data.clear()
+            st.rerun()
 
         st.markdown("---")
 

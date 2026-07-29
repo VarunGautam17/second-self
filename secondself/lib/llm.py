@@ -47,19 +47,37 @@ Rules:
 """
 
 def get_client() -> Groq:
-    """Return an initialized Groq client."""
-    api_key = os.environ.get("GROQ_API_KEY")
+    """Return an initialized Groq client prioritizing active user session key."""
+    api_key = None
+    try:
+        import streamlit as st
+        if "groq_api_key" in st.session_state and st.session_state["groq_api_key"]:
+            api_key = st.session_state["groq_api_key"]
+        elif "GROQ_API_KEY" in st.secrets:
+            api_key = st.secrets["GROQ_API_KEY"]
+    except Exception:
+        pass
+
     if not api_key:
-        try:
-            import streamlit as st
-            if "GROQ_API_KEY" in st.secrets:
-                api_key = st.secrets["GROQ_API_KEY"]
-                os.environ["GROQ_API_KEY"] = api_key
-        except Exception:
-            pass
+        api_key = os.environ.get("GROQ_API_KEY")
+
     if not api_key:
-        raise ValueError("GROQ_API_KEY environment variable is not set. Please check your .env file or Streamlit Secrets.")
+        raise ValueError("GROQ_API_KEY is not configured. Please enter your Groq API key on the login screen.")
+
     return Groq(api_key=api_key)
+
+
+def validate_groq_api_key(api_key: str) -> tuple[bool, str]:
+    """Test Groq API key validity with a lightweight API call."""
+    clean_key = api_key.strip()
+    if not clean_key:
+        return False, "Groq API key cannot be empty."
+    try:
+        client = Groq(api_key=clean_key)
+        client.models.list()
+        return True, "API Key successfully validated!"
+    except Exception as e:
+        return False, f"Invalid Groq API key: {e}"
 
 def call_llm(
     prompt: str,
