@@ -18,6 +18,11 @@ if str(secondself_dir) not in sys.path:
 # Change working directory to secondself for relative paths (static/, data/, wiki/, raw/)
 os.chdir(secondself_dir)
 
+# Clear stale cached lib modules if present
+for mod in list(sys.modules.keys()):
+    if mod == "lib" or mod.startswith("lib."):
+        sys.modules.pop(mod, None)
+
 # Execute secondself/app.py natively as __main__
 target_script = secondself_dir / "app.py"
 runpy.run_path(str(target_script), run_name="__main__")

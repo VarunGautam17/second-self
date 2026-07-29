@@ -504,7 +504,16 @@ def render_auth_screen():
                     return
 
                 with st.spinner("Validating Groq API key..."):
-                    valid, msg = llm.validate_groq_api_key(clean_key)
+                    if hasattr(llm, "validate_groq_api_key"):
+                        valid, msg = llm.validate_groq_api_key(clean_key)
+                    else:
+                        try:
+                            from groq import Groq
+                            test_client = Groq(api_key=clean_key)
+                            test_client.models.list()
+                            valid, msg = True, "API Key successfully validated!"
+                        except Exception as ex:
+                            valid, msg = False, f"Invalid Groq API key: {ex}"
 
                 if not valid:
                     st.error(msg)
