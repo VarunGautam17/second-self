@@ -116,13 +116,11 @@ def main():
     )
     args = parser.parse_args()
 
-    # Verify Groq API key and get client
     try:
         from lib import llm
         client = llm.get_client()
     except Exception as e:
-        print(f"Error initializing Groq client: {e}")
-        return
+        raise RuntimeError(f"Error initializing Groq client: {e}")
 
     # Read all raw captures
     print("Reading raw captures...")

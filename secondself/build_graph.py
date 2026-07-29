@@ -119,7 +119,6 @@ def main():
     print(f"Total Nodes: {len(nodes)}")
     print(f"Total Edges: {len(edges)}")
     print(f"Saved graph to: {written_path}")
-    print(f"Saved copy to: {data_graph_path}")
     print(f"Updated data/index.json (last_graph_build: {index.last_graph_build})")
 
     if args.verbose:

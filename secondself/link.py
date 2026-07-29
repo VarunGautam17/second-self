@@ -121,8 +121,7 @@ def main():
     try:
         model = SentenceTransformer(args.model)
     except Exception as e:
-        print(f"Error loading model: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Error loading model '{args.model}': {e}")
 
     # 1. Load existing wiki notes
     print("Reading existing wiki notes...")
@@ -168,8 +167,7 @@ def main():
     try:
         note_embeddings = model.encode(texts, show_progress_bar=True, convert_to_numpy=True)
     except Exception as e:
-        print(f"Error generating embeddings: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Error generating embeddings: {e}")
 
     # Calculate similarity links
     print(f"Calculating similarity links (threshold: {args.threshold}, max-links: {args.max_links})...")
