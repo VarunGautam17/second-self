@@ -19,7 +19,7 @@ import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 from secondself.lib import storage, llm, embeddings, models
-from secondself.lib.cloud_sync import sync_from_cloud, sync_to_cloud
+from secondself.lib.cloud_sync import sync_from_cloud, sync_to_cloud, get_username_for_api_key
 from secondself import ask, capture, pipeline
 
 load_dotenv()
@@ -533,6 +533,14 @@ def render_auth_screen():
                     if existing_cfg["api_key"] != clean_key:
                         st.error("🔒 Security Error: This username is registered to a different Groq API Key. Please check your key or use a different username.")
                         return
+                else:
+                    # If this is a new user workspace, ensure the API Key is not already taken by someone else
+                    with st.spinner("Checking API key registration..."):
+                        existing_owner = get_username_for_api_key(clean_key)
+                    if existing_owner and existing_owner.lower() != clean_name.lower():
+                        st.error(f"🔒 Security Error: This Groq API Key is already registered to a different account ('{existing_owner}'). You cannot associate it with a new username.")
+                        return
+
 
                 storage.init_user_workspace(user_slug, copy_demo_data=seed_demo, user_name=clean_name, api_key=clean_key)
                 

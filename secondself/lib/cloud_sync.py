@@ -90,3 +90,42 @@ def _delete_folder(client, prefix: str) -> None:
     except Exception as e:
         print(f"Error deleting folder {prefix}: {e}")
 
+def get_username_for_api_key(api_key: str) -> str | None:
+    """Check if the given API key is already associated with any registered username."""
+    client = get_supabase()
+    if client:
+        try:
+            # List all folders under users/ in Supabase
+            files = client.storage.from_(BUCKET_NAME).list("users")
+            for f in files:
+                slug = f["name"]
+                if slug == ".emptyFolderPlaceholder":
+                    continue
+                try:
+                    data = client.storage.from_(BUCKET_NAME).download(f"users/{slug}/config.json")
+                    import json
+                    cfg = json.loads(data.decode("utf-8"))
+                    if cfg.get("api_key") == api_key:
+                        return cfg.get("user_name", slug)
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"Error checking API key ownership in cloud: {e}")
+    else:
+        # Check local files
+        users_dir = PROJECT_ROOT / "users"
+        if users_dir.is_dir():
+            for user_folder in users_dir.iterdir():
+                if user_folder.is_dir():
+                    cfg_path = user_folder / "config.json"
+                    if cfg_path.is_file():
+                        try:
+                            import json
+                            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+                            if cfg.get("api_key") == api_key:
+                                return cfg.get("user_name")
+                        except Exception:
+                            pass
+    return None
+
+
