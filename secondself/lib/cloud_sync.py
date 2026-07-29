@@ -63,3 +63,30 @@ def _upload_folder(client, local_dir: Path, prefix: str) -> None:
                 print(f"Error uploading {key}: {e}")
         elif item.is_dir():
             _upload_folder(client, item, f"{prefix}{item.name}/")
+
+def delete_from_cloud(user_slug: str) -> None:
+    """Recursively delete user workspace directory from Supabase storage."""
+    client = get_supabase()
+    if not client:
+        return
+    prefix = f"users/{user_slug}/"
+    _delete_folder(client, prefix)
+
+def _delete_folder(client, prefix: str) -> None:
+    try:
+        files = client.storage.from_(BUCKET_NAME).list(prefix)
+        file_paths = []
+        for f in files:
+            name = f["name"]
+            if name == ".emptyFolderPlaceholder":
+                continue
+            is_file = "id" in f or "metadata" in f or "." in name
+            if is_file:
+                file_paths.append(f"{prefix}{name}")
+            else:
+                _delete_folder(client, f"{prefix}{name}/")
+        if file_paths:
+            client.storage.from_(BUCKET_NAME).remove(file_paths)
+    except Exception as e:
+        print(f"Error deleting folder {prefix}: {e}")
+

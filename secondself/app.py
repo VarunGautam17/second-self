@@ -527,6 +527,13 @@ def render_auth_screen():
                 with st.spinner("Syncing your 2nd Brain from the cloud..."):
                     sync_from_cloud(user_slug)
                     
+                # Security Check: Verify API key matches existing user's registered API key
+                existing_cfg = storage.load_user_config(user_slug)
+                if existing_cfg and existing_cfg.get("api_key"):
+                    if existing_cfg["api_key"] != clean_key:
+                        st.error("🔒 Security Error: This username is registered to a different Groq API Key. Please check your key or use a different username.")
+                        return
+
                 storage.init_user_workspace(user_slug, copy_demo_data=seed_demo, user_name=clean_name, api_key=clean_key)
                 
                 # Push initialization config to cloud
@@ -590,6 +597,49 @@ def main():
         # Active User Identity Badge & Logout
         st.info(f"👤 Logged in as **{user_name}**")
         st.success("Groq API Connected", icon="✅")
+
+        with st.expander("⚙️ Account Settings / Edit Username"):
+            new_name_input = st.text_input("New Username:", value=user_name, key="input_edit_username")
+            if st.button("Save New Username", key="btn_save_username", use_container_width=True):
+                clean_new_name = new_name_input.strip()
+                if not clean_new_name:
+                    st.error("Username cannot be empty.")
+                elif clean_new_name == user_name:
+                    st.info("Username unchanged.")
+                else:
+                    new_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', clean_new_name.lower())
+                    if new_slug != user_slug:
+                        with st.spinner("Checking username availability..."):
+                            sync_from_cloud(new_slug)
+                            target_cfg = storage.load_user_config(new_slug)
+                        if target_cfg:
+                            st.error(f"Username '{clean_new_name}' is already taken.")
+                        else:
+                            with st.spinner("Migrating workspace..."):
+                                old_dir = storage.PROJECT_ROOT / "users" / user_slug
+                                new_dir = storage.PROJECT_ROOT / "users" / new_slug
+                                if old_dir.exists():
+                                    import shutil
+                                    shutil.copytree(old_dir, new_dir, dirs_exist_ok=True)
+                                
+                                storage.save_user_config(new_slug, clean_new_name, user_key)
+                                sync_to_cloud(new_slug)
+                                from secondself.lib.cloud_sync import delete_from_cloud
+                                delete_from_cloud(user_slug)
+                                
+                                storage.set_active_user_slug(new_slug)
+                                st.session_state["user_name"] = clean_new_name
+                                st.session_state["user_slug"] = new_slug
+                                st.query_params["user"] = new_slug
+                                st.cache_data.clear()
+                                st.success(f"Username changed to '{clean_new_name}'!")
+                                st.rerun()
+                    else:
+                        storage.save_user_config(user_slug, clean_new_name, user_key)
+                        sync_to_cloud(user_slug)
+                        st.session_state["user_name"] = clean_new_name
+                        st.success("Username updated!")
+                        st.rerun()
 
         if st.button("Switch User / Log Out 🚪", key="btn_logout", use_container_width=True):
             st.query_params.clear()
