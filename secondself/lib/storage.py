@@ -156,18 +156,16 @@ def verify_user_passcode(user_slug: str, passcode: str = "", api_key: str = "") 
         else:
             return False, "Incorrect passcode for this workspace."
 
-    # 2. Fallback to API Key verification if no passcode hash was set
-    if stored_key and api_key:
-        if stored_key.strip() == api_key.strip():
-            return True, "API Key authenticated successfully."
+    # 2. Handle legacy accounts without a passcode hash
+    # Check if either the passcode field or the API key field contains the correct API key
+    effective_key = (passcode or api_key or "").strip()
+    if stored_key and effective_key:
+        if stored_key.strip() == effective_key:
+            return True, "Authenticated via legacy API Key."
         else:
             return False, "Groq API Key does not match workspace owner key."
 
-    # 3. Check if passcode supplied matches stored API key
-    if passcode and stored_key and passcode.strip() == stored_key.strip():
-        return True, "Authenticated via API key."
-
-    return False, "Passcode or valid API Key required to access this workspace."
+    return False, "This legacy workspace does not have a passcode set yet. Please sign in by entering your registered Groq API Key in the 'Workspace Secret Passcode' or 'Groq API Key' field to unlock it."
 
 
 def init_user_workspace(user_slug: str, copy_demo_data: bool = False, user_name: str = "", api_key: str = "", passcode: str = "") -> Path:

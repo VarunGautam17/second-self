@@ -18,9 +18,9 @@ if str(secondself_dir) not in sys.path:
 # Change working directory to secondself for relative paths (static/, data/, wiki/, raw/)
 os.chdir(secondself_dir)
 
-# Clear stale cached lib modules if present
+# Clear stale cached lib and secondself modules if present
 for mod in list(sys.modules.keys()):
-    if mod == "lib" or mod.startswith("lib."):
+    if mod in ("lib", "secondself") or mod.startswith(("lib.", "secondself.")):
         sys.modules.pop(mod, None)
 
 # Execute secondself/app.py natively as __main__
