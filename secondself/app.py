@@ -449,132 +449,171 @@ def handle_uploaded_file(uploaded_file):
     )
     saved_dir = storage.write_raw_capture(meta, captured_text)
     st.sidebar.success(f"Uploaded '{uploaded_file.name}' ({len(captured_text)} chars) -> raw/{saved_dir.name}")
-
-
 def render_auth_screen():
-    """Render landing screen prompting user for Name and Groq API Key."""
+    """Render landing screen prompting user for Name, Passcode, and Groq API Key."""
     st.markdown("""
     <div style='text-align: center; padding-top: 30px; padding-bottom: 20px;'>
         <h1 style='font-size: 3.5rem; font-weight: 800; font-family: "Manrope", "Inter", sans-serif; color: #0F172A; letter-spacing: -0.04em; margin-bottom: 8px;'>
             Second<span style='color: #10B981;'>Self</span>
         </h1>
-        <p style='font-size: 1.15rem; color: #64748B; max-width: 600px; margin: 0 auto 24px auto; font-family: "Inter", sans-serif;'>
-            Your private, AI-powered Personal Knowledge Brain. Sign in with your name and Groq API key to access your personalized workspace.
+        <p style='font-size: 1.15rem; color: #64748B; max-width: 620px; margin: 0 auto 24px auto; font-family: "Inter", sans-serif;'>
+            Your private, AI-powered Personal Knowledge Brain. Sign in with your username and secret passcode to access your workspace.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 2.2, 1])
+    col1, col2, col3 = st.columns([1, 2.4, 1])
     with col2:
-        with st.form("auth_form", clear_on_submit=False):
-            st.markdown("### 🔑 Access Your 2nd Brain")
-            user_name_input = st.text_input("Your Name / Username", placeholder="e.g. Varun Gautam")
-            groq_key_input = st.text_input(
-                "Groq API Key",
-                type="password",
-                placeholder="gsk_...",
-            )
-            st.markdown(
-                "👉 **Get your free Groq API key here:** [console.groq.com/keys](https://console.groq.com/keys)",
-                unsafe_allow_html=True
-            )
-            seed_demo = st.checkbox(
-                "Load Demo Knowledge Base (Pre-populates sample PARA notes & graph)",
-                value=True
-            )
+        tab_signin, tab_signup = st.tabs(["🔐 Sign In", "✨ Create 2nd Brain"])
 
-            submitted = st.form_submit_button("Enter My 2nd Brain 🚀", use_container_width=True)
+        with tab_signin:
+            with st.form("signin_form", clear_on_submit=False):
+                st.markdown("### 🔐 Sign In to Your 2nd Brain")
+                user_name_input = st.text_input("Your Username", placeholder="e.g. Varun Gautam", key="login_username")
+                passcode_input = st.text_input("Workspace Secret Passcode", type="password", placeholder="Enter your secret passcode", key="login_passcode")
+                groq_key_input = st.text_input("Groq API Key (Optional if registered)", type="password", placeholder="gsk_...", key="login_groq_key")
 
-            if submitted:
-                clean_name = user_name_input.strip()
-                clean_key = groq_key_input.strip()
+                submitted_login = st.form_submit_button("Sign In to My 2nd Brain 🚀", use_container_width=True)
 
-                if not clean_name:
-                    st.error("Please enter your name or username to identify your 2nd brain.")
-                    return
+                if submitted_login:
+                    clean_name = user_name_input.strip()
+                    clean_passcode = passcode_input.strip()
+                    clean_key = groq_key_input.strip()
 
-                # If user left API key empty, fallback to server secrets / env if available
-                if not clean_key:
-                    if "GROQ_API_KEY" in st.secrets:
-                        clean_key = st.secrets["GROQ_API_KEY"]
-                    else:
-                        clean_key = os.environ.get("GROQ_API_KEY", "")
-
-                if not clean_key:
-                    st.error("Please enter your Groq API Key. Get a free key at https://console.groq.com/keys")
-                    return
-
-                with st.spinner("Validating Groq API key..."):
-                    if hasattr(llm, "validate_groq_api_key"):
-                        valid, msg = llm.validate_groq_api_key(clean_key)
-                    else:
-                        try:
-                            from groq import Groq
-                            test_client = Groq(api_key=clean_key)
-                            test_client.models.list()
-                            valid, msg = True, "API Key successfully validated!"
-                        except Exception as ex:
-                            valid, msg = False, f"Invalid Groq API key: {ex}"
-
-                if not valid:
-                    st.error(msg)
-                    return
-
-                # Create clean slug for user folder (e.g. "varun_gautam")
-                user_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', clean_name.lower())
-                
-                # Sync from cloud if existing user
-                with st.spinner("Syncing your 2nd Brain from the cloud..."):
-                    sync_from_cloud(user_slug)
-                    
-                # Security Check: Verify API key matches existing user's registered API key
-                existing_cfg = storage.load_user_config(user_slug)
-                if existing_cfg and existing_cfg.get("api_key"):
-                    if existing_cfg["api_key"] != clean_key:
-                        st.error("🔒 Security Error: This username is registered to a different Groq API Key. Please check your key or use a different username.")
+                    if not clean_name:
+                        st.error("Please enter your username.")
                         return
-                else:
-                    # If this is a new user workspace, ensure the API Key is not already taken by someone else
-                    with st.spinner("Checking API key registration..."):
-                        existing_owner = get_username_for_api_key(clean_key)
+
+                    user_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', clean_name.lower())
+
+                    # Download user workspace from cloud to local storage
+                    with st.spinner("Accessing workspace..."):
+                        sync_from_cloud(user_slug)
+
+                    # Verify credentials against stored config
+                    valid_auth, auth_msg = storage.verify_user_passcode(user_slug, passcode=clean_passcode, api_key=clean_key)
+                    if not valid_auth:
+                        st.error(f"🔒 Access Denied: {auth_msg}")
+                        return
+
+                    user_cfg = storage.load_user_config(user_slug) or {}
+                    stored_key = user_cfg.get("api_key", clean_key)
+
+                    if not stored_key:
+                        stored_key = clean_key or os.environ.get("GROQ_API_KEY", "")
+
+                    if not stored_key:
+                        st.error("Please enter your Groq API Key to enable RAG synthesis.")
+                        return
+
+                    # Authenticate session state cleanly
+                    st.session_state["user_name"] = user_cfg.get("user_name", clean_name)
+                    st.session_state["user_slug"] = user_slug
+                    st.session_state["groq_api_key"] = stored_key
+                    st.session_state["user_authenticated"] = True
+                    os.environ["GROQ_API_KEY"] = stored_key
+
+                    # Clear query params so URL remains clean
+                    if "user" in st.query_params:
+                        st.query_params.clear()
+
+                    st.cache_data.clear()
+                    st.success(f"Welcome back, {clean_name}!")
+                    st.rerun()
+
+        with tab_signup:
+            with st.form("signup_form", clear_on_submit=False):
+                st.markdown("### ✨ Create a New 2nd Brain Workspace")
+                user_name_new = st.text_input("Your Name / Username", placeholder="e.g. Varun Gautam", key="signup_username")
+                passcode_new = st.text_input("Create Secret Passcode", type="password", placeholder="Set a secret passcode", key="signup_passcode")
+                groq_key_new = st.text_input("Groq API Key", type="password", placeholder="gsk_...", key="signup_groq_key")
+                st.markdown(
+                    "👉 **Get your free Groq API key:** [console.groq.com/keys](https://console.groq.com/keys)",
+                    unsafe_allow_html=True
+                )
+                seed_demo = st.checkbox("Pre-populate Demo Knowledge Base", value=True, key="signup_seed_demo")
+
+                submitted_signup = st.form_submit_button("Create Workspace 🚀", use_container_width=True)
+
+                if submitted_signup:
+                    clean_name = user_name_new.strip()
+                    clean_passcode = passcode_new.strip()
+                    clean_key = groq_key_new.strip()
+
+                    if not clean_name:
+                        st.error("Please enter a username.")
+                        return
+                    if not clean_passcode:
+                        st.error("Please set a secret passcode to protect your workspace.")
+                        return
+
+                    if not clean_key:
+                        if "GROQ_API_KEY" in st.secrets:
+                            clean_key = st.secrets["GROQ_API_KEY"]
+                        else:
+                            clean_key = os.environ.get("GROQ_API_KEY", "")
+
+                    if not clean_key:
+                        st.error("Please enter your Groq API Key. Get a free key at https://console.groq.com/keys")
+                        return
+
+                    user_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', clean_name.lower())
+
+                    # Check if workspace already exists
+                    with st.spinner("Checking username availability..."):
+                        sync_from_cloud(user_slug)
+                        existing_cfg = storage.load_user_config(user_slug)
+
+                    if existing_cfg:
+                        st.error(f"Workspace '{clean_name}' already exists. Please use the 'Sign In' tab to log in with your passcode.")
+                        return
+
+                    # Validate API Key
+                    with st.spinner("Validating Groq API key..."):
+                        if hasattr(llm, "validate_groq_api_key"):
+                            valid, msg = llm.validate_groq_api_key(clean_key)
+                        else:
+                            try:
+                                from groq import Groq
+                                test_client = Groq(api_key=clean_key)
+                                test_client.models.list()
+                                valid, msg = True, "API Key validated!"
+                            except Exception as ex:
+                                valid, msg = False, f"Invalid Groq API key: {ex}"
+
+                    if not valid:
+                        st.error(msg)
+                        return
+
+                    existing_owner = get_username_for_api_key(clean_key)
                     if existing_owner and existing_owner.lower() != clean_name.lower():
-                        st.error(f"🔒 Security Error: This Groq API Key is already registered to a different account ('{existing_owner}'). You cannot associate it with a new username.")
+                        st.error(f"🔒 Security Error: This Groq API Key is already registered to '{existing_owner}'. You cannot associate it with a new username.")
                         return
 
+                    # Initialize workspace with hashed passcode
+                    storage.init_user_workspace(user_slug, copy_demo_data=seed_demo, user_name=clean_name, api_key=clean_key, passcode=clean_passcode)
+                    sync_to_cloud(user_slug)
 
-                storage.init_user_workspace(user_slug, copy_demo_data=seed_demo, user_name=clean_name, api_key=clean_key)
-                
-                # Push initialization config to cloud
-                sync_to_cloud(user_slug)
+                    st.session_state["user_name"] = clean_name
+                    st.session_state["user_slug"] = user_slug
+                    st.session_state["groq_api_key"] = clean_key
+                    st.session_state["user_authenticated"] = True
+                    os.environ["GROQ_API_KEY"] = clean_key
 
-                st.session_state["user_name"] = clean_name
-                st.session_state["user_slug"] = user_slug
-                st.session_state["groq_api_key"] = clean_key
-                st.session_state["user_authenticated"] = True
-                os.environ["GROQ_API_KEY"] = clean_key
+                    if "user" in st.query_params:
+                        st.query_params.clear()
 
-                # Preserve session across page refreshes via URL parameter
-                st.query_params["user"] = user_slug
-
-                st.cache_data.clear()
-                st.success(f"Welcome back, {clean_name}!")
-                st.rerun()
+                    st.cache_data.clear()
+                    st.success(f"Workspace created! Welcome, {clean_name}!")
+                    st.rerun()
 
 
 def main():
-    # 1. User Authentication & Session Persistence Check
-    if "user_authenticated" not in st.session_state or not st.session_state["user_authenticated"]:
-        param_slug = st.query_params.get("user")
-        if param_slug:
-            # Sync user data from cloud to local ephemeral storage before loading config
-            sync_from_cloud(param_slug)
-            user_cfg = storage.load_user_config(param_slug)
-            if user_cfg and user_cfg.get("user_name"):
-                st.session_state["user_name"] = user_cfg["user_name"]
-                st.session_state["user_slug"] = user_cfg["user_slug"]
-                st.session_state["groq_api_key"] = user_cfg.get("api_key", "")
-                st.session_state["user_authenticated"] = True
+    # 1. Clear URL query parameters to prevent parameter-based auto-login or URL leaks
+    if "user" in st.query_params:
+        st.query_params.clear()
 
+    # 2. Enforce Authentication Check
     if not st.session_state.get("user_authenticated"):
         render_auth_screen()
         return
@@ -606,14 +645,14 @@ def main():
         st.info(f"👤 Logged in as **{user_name}**")
         st.success("Groq API Connected", icon="✅")
 
-        with st.expander("⚙️ Account Settings / Edit Username"):
-            new_name_input = st.text_input("New Username:", value=user_name, key="input_edit_username")
-            if st.button("Save New Username", key="btn_save_username", use_container_width=True):
+        with st.expander("⚙️ Account Settings / Passcode"):
+            new_name_input = st.text_input("Username:", value=user_name, key="input_edit_username")
+            new_passcode_input = st.text_input("New Passcode (Leave blank to keep existing):", type="password", key="input_edit_passcode")
+            if st.button("Save Account Settings", key="btn_save_username", use_container_width=True):
                 clean_new_name = new_name_input.strip()
+                clean_new_passcode = new_passcode_input.strip()
                 if not clean_new_name:
                     st.error("Username cannot be empty.")
-                elif clean_new_name == user_name:
-                    st.info("Username unchanged.")
                 else:
                     new_slug = re.sub(r'[^a-zA-Z0-9_-]', '_', clean_new_name.lower())
                     if new_slug != user_slug:
@@ -629,34 +668,29 @@ def main():
                                 if old_dir.exists():
                                     import shutil
                                     shutil.copytree(old_dir, new_dir, dirs_exist_ok=True)
-                                
-                                storage.save_user_config(new_slug, clean_new_name, user_key)
+
+                                storage.save_user_config(new_slug, clean_new_name, user_key, passcode=clean_new_passcode)
                                 sync_to_cloud(new_slug)
                                 from secondself.lib.cloud_sync import delete_from_cloud
                                 delete_from_cloud(user_slug)
-                                
+
                                 storage.set_active_user_slug(new_slug)
                                 st.session_state["user_name"] = clean_new_name
                                 st.session_state["user_slug"] = new_slug
-                                st.query_params["user"] = new_slug
                                 st.cache_data.clear()
-                                st.success(f"Username changed to '{clean_new_name}'!")
+                                st.success(f"Account settings updated for '{clean_new_name}'!")
                                 st.rerun()
                     else:
-                        storage.save_user_config(user_slug, clean_new_name, user_key)
+                        storage.save_user_config(user_slug, clean_new_name, user_key, passcode=clean_new_passcode)
                         sync_to_cloud(user_slug)
                         st.session_state["user_name"] = clean_new_name
-                        st.success("Username updated!")
+                        st.success("Account settings updated!")
                         st.rerun()
 
         if st.button("Switch User / Log Out 🚪", key="btn_logout", use_container_width=True):
             st.query_params.clear()
             storage.set_active_user_slug(None)
-            st.session_state["user_authenticated"] = False
-            st.session_state["user_name"] = ""
-            st.session_state["user_slug"] = ""
-            st.session_state["groq_api_key"] = ""
-            st.cache_data.clear()
+            st.session_state.clear()
             st.rerun()
 
         st.markdown("---")

@@ -97,15 +97,30 @@ def ensure_dirs() -> None:
         (wiki_dir / category).mkdir(parents=True, exist_ok=True)
 
 
-def save_user_config(user_slug: str, user_name: str, api_key: str) -> None:
-    """Save user session configuration into users/<user_slug>/config.json."""
+def hash_passcode(passcode: str) -> str:
+    """Hash passcode using SHA-256 with salt for secure storage."""
+    if not passcode:
+        return ""
+    salt = "SecondSelf_Salt_2026_Secure"
+    return hashlib.sha256((salt + passcode).encode("utf-8")).hexdigest()
+
+
+def save_user_config(user_slug: str, user_name: str, api_key: str, passcode: str = "") -> None:
+    """Save user session configuration into users/<user_slug>/config.json with hashed passcode."""
     user_base = PROJECT_ROOT / "users" / user_slug
     user_base.mkdir(parents=True, exist_ok=True)
     config_path = user_base / "config.json"
+
+    existing = load_user_config(user_slug) or {}
+    passcode_hash = existing.get("passcode_hash", "")
+    if passcode:
+        passcode_hash = hash_passcode(passcode)
+
     data = {
         "user_name": user_name,
         "user_slug": user_slug,
         "api_key": api_key,
+        "passcode_hash": passcode_hash,
         "last_login": utc_now_iso(),
     }
     config_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
@@ -122,7 +137,40 @@ def load_user_config(user_slug: str) -> dict | None:
         return None
 
 
-def init_user_workspace(user_slug: str, copy_demo_data: bool = False, user_name: str = "", api_key: str = "") -> Path:
+def verify_user_passcode(user_slug: str, passcode: str = "", api_key: str = "") -> tuple[bool, str]:
+    """
+    Verify user authentication against stored config.
+    Returns (is_valid, message).
+    """
+    cfg = load_user_config(user_slug)
+    if not cfg:
+        return False, "User workspace does not exist."
+
+    stored_hash = cfg.get("passcode_hash", "")
+    stored_key = cfg.get("api_key", "")
+
+    # 1. Verify passcode hash if user set a passcode
+    if stored_hash:
+        if passcode and hash_passcode(passcode) == stored_hash:
+            return True, "Authentication successful."
+        else:
+            return False, "Incorrect passcode for this workspace."
+
+    # 2. Fallback to API Key verification if no passcode hash was set
+    if stored_key and api_key:
+        if stored_key.strip() == api_key.strip():
+            return True, "API Key authenticated successfully."
+        else:
+            return False, "Groq API Key does not match workspace owner key."
+
+    # 3. Check if passcode supplied matches stored API key
+    if passcode and stored_key and passcode.strip() == stored_key.strip():
+        return True, "Authenticated via API key."
+
+    return False, "Passcode or valid API Key required to access this workspace."
+
+
+def init_user_workspace(user_slug: str, copy_demo_data: bool = False, user_name: str = "", api_key: str = "", passcode: str = "") -> Path:
     """Initialize user workspace in users/<user_slug>/, optionally seeding demo data."""
     user_base = PROJECT_ROOT / "users" / user_slug
     user_raw = user_base / "raw"
@@ -135,7 +183,7 @@ def init_user_workspace(user_slug: str, copy_demo_data: bool = False, user_name:
         (user_wiki / category).mkdir(parents=True, exist_ok=True)
 
     if user_name:
-        save_user_config(user_slug, user_name, api_key)
+        save_user_config(user_slug, user_name, api_key, passcode=passcode)
 
     if copy_demo_data:
         demo_wiki = PROJECT_ROOT / "wiki"
