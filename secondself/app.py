@@ -19,6 +19,7 @@ import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 from secondself.lib import storage, llm, embeddings, models
+from secondself.lib.supabase_client import get_supabase
 from secondself.lib.cloud_sync import sync_from_cloud, sync_to_cloud, get_username_for_api_key
 from secondself import ask, capture, pipeline
 
@@ -464,6 +465,12 @@ def render_auth_screen():
 
     col1, col2, col3 = st.columns([1, 2.4, 1])
     with col2:
+        if not get_supabase():
+            st.warning(
+                "⚠️ **Persistent Cloud Storage Notice:** `SUPABASE_URL` and `SUPABASE_KEY` are not set in Streamlit Secrets. "
+                "Workspaces created now are stored on server temporary disk and will reset when Streamlit sleeps. "
+                "Add your Supabase credentials to Streamlit Secrets to enable 100% permanent cloud persistence."
+            )
         tab_signin, tab_signup = st.tabs(["🔐 Sign In", "✨ Create 2nd Brain"])
 
         with tab_signin:
