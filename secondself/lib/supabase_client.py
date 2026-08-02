@@ -17,12 +17,23 @@ def get_supabase() -> Client | None:
     
     try:
         import streamlit as st
-        if not url and "SUPABASE_URL" in st.secrets:
-            url = st.secrets["SUPABASE_URL"]
-        if not key and "SUPABASE_KEY" in st.secrets:
-            key = st.secrets["SUPABASE_KEY"]
+        if not url:
+            try:
+                url = st.secrets.get("SUPABASE_URL", None)
+            except Exception:
+                pass
+        if not key:
+            try:
+                key = st.secrets.get("SUPABASE_KEY", None)
+            except Exception:
+                pass
     except Exception:
         pass
+        
+    if url:
+        url = str(url).strip()
+    if key:
+        key = str(key).strip()
         
     if url and key and create_client:
         try:
